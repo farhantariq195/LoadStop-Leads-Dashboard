@@ -707,6 +707,7 @@ function markAdsSynced(isRefresh){
   LIVE_ADS.lastSync=new Date();
   saveAdsConnection();
   el("adsStatusTxt").textContent=`Connected · last synced ${LIVE_ADS.lastSync.toLocaleTimeString()}`;
+  el("adsErr").textContent="";
   if(!isRefresh)startAdsAuto();
   pullMetaLive(); // optional: silently picks up a Meta spend tab in the same Sheet, if one exists
   pullSqlLive(); // optional: silently picks up a SQL Count tab in the same Sheet, if one exists
@@ -814,6 +815,7 @@ function disconnectAds(){
   el("mqlSqlMatrixPanel").classList.add("hidden");
   el("adsStatusTxt").textContent="Not connected — export campaign performance into a Sheet with a Google Ads Script, then link it here.";
   el("adsUrl").value="";el("adsToken").value="";el("adsErr").textContent="";
+  if(RAW.length)render();
 }
 function ingestAds(objArray,onErr){
   const clean=(objArray||[]).filter(r=>Object.values(r).some(v=>String(v||"").trim()!==""));
@@ -831,7 +833,10 @@ function ingestAds(objArray,onErr){
   el("adsSection").classList.remove("hidden");
   el("roiSectionHead").classList.remove("hidden");
   el("roiSection").classList.remove("hidden");
-  renderAds();
+  /* Leads and Ads load asynchronously and can resolve in either order. If leads are already in,
+     do a full render() (it includes renderAds()) so the top KPI row — Amount Spent, Cost/Lead —
+     picks up hasAds=true instead of staying stuck on whatever it rendered before Ads arrived. */
+  if(RAW.length)render();else renderAds();
 }
 /* ---- date-range filtering for the Ads Performance section (master + per-widget) ---- */
 function resolveAdsRange(preset,customStart,customEnd){
