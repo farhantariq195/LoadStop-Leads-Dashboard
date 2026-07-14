@@ -143,6 +143,13 @@
   .livesel option{color:#16232f}
   .livebtn{background:none;border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:6px;padding:2px 8px;cursor:pointer;font-size:14px;line-height:1}
   .livebtn:hover{background:rgba(255,255,255,.15)}
+  .refreshbtn{background:none;border:1px solid var(--line);color:var(--navy2);border-radius:7px;padding:5px 10px;cursor:pointer;font-size:12px;font-weight:600;line-height:1;display:inline-flex;align-items:center;gap:6px;font-family:inherit}
+  .refreshbtn:hover{background:#f4f7fb}
+  .refreshbtn:disabled{opacity:.6;cursor:default}
+  .refreshbtn .ricon{display:inline-block;font-size:13px}
+  .refreshbtn.spinning .ricon{animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .insightsUpdated{font-size:10.5px;color:var(--muted);white-space:nowrap}
 
   #adsPanel{border-left:4px solid var(--blue)}
   .adsrow{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
@@ -285,7 +292,16 @@
       <div class="scroll" style="max-height:560px"><table id="tRaw"></table></div>
     </div>
 
-    <div class="panel" id="insights"><h3>Key Findings &amp; Patterns</h3><div class="icards" id="insightGrid"></div></div>
+    <div class="panel" id="insights">
+      <div class="wtitle">
+        <h3 style="margin:0">Key Findings &amp; Patterns</h3>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="insightsUpdated" id="insightsUpdated"></span>
+          <button class="refreshbtn" id="insightsRefreshBtn" title="Pull the latest data and recompute these findings"><span class="ricon">&#8635;</span>Refresh</button>
+        </div>
+      </div>
+      <div class="icards" id="insightGrid"></div>
+    </div>
 
     <div id="momSection" class="hidden">
       <div class="sechead"><h2 id="momTitle">Month-over-Month</h2><div class="line"></div></div>
@@ -1543,6 +1559,8 @@ function buildInsights(rows,M,C,cmpRows){
   }
 
   el("insightGrid").innerHTML=cards.join("");
+  const upd=el("insightsUpdated");
+  if(upd)upd.textContent="Updated "+new Date().toLocaleTimeString();
 }
 
 /* ---------- table + chart factories ---------- */
@@ -1690,6 +1708,16 @@ el("reupload").addEventListener("change",e=>e.target.files[0]&&handleFile(e.targ
 drop.addEventListener("drop",e=>{const f=e.dataTransfer.files[0];if(f)handleFile(f);});
 el("gsConnect").addEventListener("click",connectSheet);
 el("gsRefresh").addEventListener("click",()=>pullLive(true));
+function refreshInsights(){
+  const btn=el("insightsRefreshBtn");
+  if(!btn)return;
+  btn.classList.add("spinning");
+  btn.disabled=true;
+  pullLive(true);
+  if(hasAds)pullAdsLive(true);
+  setTimeout(()=>{btn.classList.remove("spinning");btn.disabled=false;},1500);
+}
+el("insightsRefreshBtn").addEventListener("click",refreshInsights);
 el("liveInterval").addEventListener("change",e=>{LIVE.interval=+e.target.value;showLive();if(LIVE.url)startAuto();});
 el("adsConnect").addEventListener("click",connectAdsSheet);
 el("adsDisconnect").addEventListener("click",disconnectAds);
