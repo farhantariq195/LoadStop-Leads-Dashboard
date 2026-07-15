@@ -156,6 +156,19 @@
   @keyframes spin{to{transform:rotate(360deg)}}
   .insightsUpdated{font-size:10.5px;color:var(--muted);white-space:nowrap}
 
+  #aiPanel{border-left:4px solid var(--orange);background:linear-gradient(135deg,#fff,#fbf5ee)}
+  .airow{display:flex;gap:9px}
+  #aiQuestion{flex:1;font-family:inherit;font-size:13.5px;border:1px solid var(--line);border-radius:9px;padding:10px 13px;color:var(--ink)}
+  #aiQuestion:focus{outline:none;border-color:var(--orange)}
+  #aiAskBtn{background:var(--navy2);color:#fff;border:none;border-radius:9px;padding:0 20px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit}
+  #aiAskBtn:hover{background:var(--navy)}
+  #aiAskBtn:disabled{opacity:.6;cursor:default}
+  #aiHistory{margin-top:14px;display:flex;flex-direction:column;gap:12px}
+  .aiqa{border-top:1px solid var(--line);padding-top:12px}
+  .aiq{font-size:12.5px;font-weight:700;color:var(--navy);margin-bottom:5px}
+  .aia{font-size:13px;color:var(--ink);line-height:1.55;white-space:pre-wrap}
+  .aia.err{color:#c0392b}
+  .aialoading{font-size:12.5px;color:var(--muted);font-style:italic}
   #adsPanel{border-left:4px solid var(--blue)}
   .adsrow{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
   .adsform{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
@@ -259,6 +272,16 @@
         <select class="fsel" id="fBooked"><option value="all">All</option><option value="booked">Booked only</option><option value="not">Not booked</option></select>
       </div>
       <button class="freset" id="fReset">Reset filters</button>
+    </div>
+
+    <div class="panel" id="aiPanel">
+      <h3 style="margin:0 0 3px">✨ Ask AI About This Dashboard</h3>
+      <p class="cap" style="margin:0 0 12px">Ask anything about your leads, campaigns, funnel, or ad performance — answered live from the current data.</p>
+      <div class="airow">
+        <input type="text" id="aiQuestion" placeholder="e.g. Which campaign has the best cost per booked meeting this month?" autocomplete="off">
+        <button class="btn" id="aiAskBtn">Ask</button>
+      </div>
+      <div id="aiHistory"></div>
     </div>
 
     <div class="panel" id="adsPanel">
@@ -1759,6 +1782,108 @@ function refreshInsights(){
   setTimeout(()=>{btn.classList.remove("spinning");btn.disabled=false;},1500);
 }
 el("insightsRefreshBtn").addEventListener("click",refreshInsights);
+
+/* ---------- Ask AI ---------- */
+function buildAiContext(){
+  const rows=currentRows();
+  const M=computeMetrics(rows);
+  const lines=[];
+  lines.push(`=== SUMMARY (active filters: ${el("subhead").textContent||"All"}) ===`);
+  lines.push(`Total Leads: ${M.total}`);
+  lines.push(`Carrier: ${M.carrier}, Broker: ${M.broker}, Hybrid: ${M.hybrid}, Other: ${M.other}`);
+  if(hasBooked)lines.push(`Meetings Booked: ${M.booked} (${M.bookRate}% book rate)`);
+  lines.push(`Enterprise leads (80+ trucks): ${M.enterprise} (${M.entRate}%), ICP+ (25+ trucks): ${M.icpPlus} (${M.icpRate}%)`);
+  lines.push(`FMCSA Verified: ${M.fmcsa}, Avg Fleet Size: ${M.avgPU}, Median Fleet Size: ${M.medPU}`);
+
+  if(hasAds){
+    const spendForFilter=adsSpendForMonth(FILTERS.month);
+    lines.push(`\n=== AD SPEND (current month filter: ${FILTERS.month}) ===`);
+    lines.push(`Total Spend (Google+Meta): $${spendForFilter!=null?spendForFilter.toFixed(2):"n/a"}`);
+    lines.push(`Cost per Lead: $${(spendForFilter&&M.total)?(spendForFilter/M.total).toFixed(2):"n/a"}`);
+  }
+
+  const bySource=aggArray(rows,r=>get(r,"source")||"Unknown");
+  if(bySource.length){
+    lines.push(`\n=== BY SOURCE ===`);
+    bySource.forEach(s=>lines.push(`${s.name}: ${s.n} leads (${s.share}% of total), booked ${s.booked} (${s.bookRate}%), enterprise ${s.ent}`));
+  }
+
+  if(hasAds&&ADS_RAW.length){
+    const campAgg=adsAggByCampaign(ADS_RAW,leadConversionsByCampaign(null));
+    lines.push(`\n=== BY CAMPAIGN (all-time ad performance) ===`);
+    campAgg.forEach(c=>lines.push(`${c.name}: $${c.cost.toFixed(2)} spend, ${c.impressions} impressions, ${c.clicks} clicks, ${c.ctr}% CTR, $${c.avgCpc.toFixed(2)} avg CPC, ${c.conversions} matched leads`));
+  }
+
+  if(hasAds){
+    const ytd=monthlySpendYTD();
+    lines.push(`\n=== MONTHLY MQL -> SQL -> DEMO (Jan through current month) ===`);
+    ytd.labels.forEach((lab,i)=>{
+      const key=ytd.year+"-"+String(i+1).padStart(2,"0");
+      const mql=computeFunnelMQL(key),sql=SQL_MONTHLY[i]||0,demo=DEMOS_MONTHLY[i]||0;
+      const spend=ytd.google[i]+ytd.meta[i];
+      lines.push(`${lab}: spend $${spend.toFixed(2)}, MQL ${mql}, SQL ${sql}, Demo Scheduled ${demo}`);
+    });
+  }
+
+  const insightEls=[...document.querySelectorAll("#insightGrid .icard")];
+  if(insightEls.length){
+    lines.push(`\n=== KEY FINDINGS (already computed by the dashboard) ===`);
+    insightEls.forEach(c=>{
+      const lab=c.querySelector(".icard-lab")?.textContent||"";
+      const val=c.querySelector(".icard-val")?.textContent||"";
+      const sub=c.querySelector(".icard-sub")?.textContent||"";
+      lines.push(`${lab}: ${val} — ${sub}`);
+    });
+  }
+
+  const st=aggArray(rows,r=>get(r,"state")||"Unknown").sort((a,b)=>b.n-a.n);
+  if(st.length){
+    lines.push(`\n=== BY STATE ===`);
+    st.forEach(s=>lines.push(`${s.name}: ${s.n} leads (${s.share}%), booked ${s.booked} (${s.bookRate}%)`));
+  }
+
+  const byType=aggArray(rows,r=>typeOf(r)||"other");
+  if(byType.length){
+    lines.push(`\n=== BY COMPANY TYPE ===`);
+    byType.forEach(t=>lines.push(`${t.name}: ${t.n} leads (${t.share}%), booked ${t.booked} (${t.bookRate}%), avg fleet size ${t.avgPU}`));
+  }
+
+  /* Deliberately aggregate-only below this point — no loop over individual lead records, so no
+     single customer's data (name, company, contact info) ever leaves the browser to the AI API. */
+  return lines.join("\n");
+}
+let aiHistory=[];
+function renderAiHistory(){
+  el("aiHistory").innerHTML=aiHistory.map(h=>`<div class="aiqa"><div class="aiq">You asked: ${esc(h.q)}</div>${h.loading?`<div class="aialoading">Thinking…</div>`:`<div class="aia${h.err?" err":""}">${esc(h.a)}</div>`}</div>`).join("");
+}
+async function askAI(){
+  const input=el("aiQuestion"),q=input.value.trim();
+  if(!q)return;
+  const btn=el("aiAskBtn");
+  btn.disabled=true;
+  const entry={q,a:"",loading:true};
+  aiHistory.unshift(entry);
+  renderAiHistory();
+  input.value="";
+  try{
+    const resp=await fetch("/api/ask-ai",{
+      method:"POST",
+      headers:{"content-type":"application/json"},
+      body:JSON.stringify({question:q,context:buildAiContext()})
+    });
+    let data;
+    try{data=await resp.json();}catch(e){data={error:"Unexpected response from the AI service."};}
+    if(!resp.ok||data.error){entry.a="Error: "+(data.error||"Something went wrong.");entry.err=true;}
+    else{entry.a=data.answer||"No answer returned.";}
+  }catch(e){
+    entry.a="Error: "+e.message;entry.err=true;
+  }
+  entry.loading=false;
+  btn.disabled=false;
+  renderAiHistory();
+}
+el("aiAskBtn").addEventListener("click",askAI);
+el("aiQuestion").addEventListener("keydown",e=>{if(e.key==="Enter")askAI();});
 el("liveInterval").addEventListener("change",e=>{LIVE.interval=+e.target.value;showLive();if(LIVE.url)startAuto();});
 el("adsConnect").addEventListener("click",connectAdsSheet);
 el("adsDisconnect").addEventListener("click",disconnectAds);
