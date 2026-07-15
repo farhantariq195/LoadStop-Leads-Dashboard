@@ -421,6 +421,11 @@
       <div class="panel adsmasterbar">
         <div><div class="widgetlab">Section date range</div><p class="cap" id="adsCap" style="margin:2px 0 0">From your connected Ads Sheet.</p></div>
         <div class="rangewrap">
+          <select class="fsel" id="adsCampaignStatus">
+            <option value="all">All Campaigns</option>
+            <option value="active">Active Only</option>
+            <option value="paused">Paused Only</option>
+          </select>
           <select class="fsel" id="adsMasterRange">
             <option value="thismonth">This Month (selected above)</option>
             <option value="today">Today</option>
@@ -912,9 +917,19 @@ function widgetRange(selectId){
   return resolveAdsRange(v);
 }
 function rangeLabel(preset){return {thismonth:"this month",today:"today",yesterday:"yesterday","7d":"the last 7 days","30d":"the last 30 days","90d":"the last 90 days",all:"all time",custom:"a custom range"}[preset]||preset;}
+function filterAdsByStatus(rows){
+  const statusFilter=el("adsCampaignStatus")?el("adsCampaignStatus").value:"all";
+  if(statusFilter==="all")return rows;
+  return rows.filter(r=>{
+    const s=(getAds(r,"status")||"").toLowerCase();
+    if(statusFilter==="active")return s.includes("enable")||s.includes("active");
+    if(statusFilter==="paused")return s.includes("pause");
+    return true;
+  });
+}
 function filterAdsByRange(range){
-  if(range==null)return ADS_RAW;
-  return ADS_RAW.filter(r=>{const t=parseEntryDate(getAds(r,"date"));return !isNaN(t)&&t>=range.start&&t<=range.end;});
+  const rows=range==null?ADS_RAW:ADS_RAW.filter(r=>{const t=parseEntryDate(getAds(r,"date"));return !isNaN(t)&&t>=range.start&&t<=range.end;});
+  return filterAdsByStatus(rows);
 }
 function filterLeadsByRange(range){
   const base=applyFilters(RAW);
@@ -1919,6 +1934,7 @@ function ymd(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"
   if(startI)startI.addEventListener("change",()=>renderAds());
   if(endI)endI.addEventListener("change",()=>renderAds());
 });
+el("adsCampaignStatus").addEventListener("change",()=>renderAds());
 
 /* reconnect to a previously connected Google Sheet after a page refresh — falling back to the
    baked-in default links below so a fresh visitor (no saved connection yet) sees live data too */
