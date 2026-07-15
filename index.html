@@ -347,6 +347,12 @@
       <div class="chartbox tall"><canvas id="cLeadsMonth"></canvas></div>
     </div>
 
+    <div class="panel hidden" id="cplMonthPanel">
+      <h3>Cost Per Lead (CPL) by Month</h3>
+      <p class="cap">Total ad spend (Google + Meta) ÷ MQLs, for every month in the sheet — same chronological order as Leads Per Month.</p>
+      <div class="chartbox tall"><canvas id="cCplMonth"></canvas></div>
+    </div>
+
     <div class="sechead"><h2>Sales Funnel — MQL to SQL</h2><div class="line"></div></div>
     <div class="panel">
       <div class="adsrow" style="margin-bottom:16px">
@@ -1310,6 +1316,17 @@ function render(){
   const leadsPerMonth=monthsChrono.map(m=>fmAll(m).length);
   if(charts.leadsMonth)charts.leadsMonth.destroy();
   charts.leadsMonth=new Chart(el("cLeadsMonth"),{type:"bar",data:{labels:monthsChrono,datasets:[{data:leadsPerMonth,backgroundColor:monthsChrono.map(m=>m===FILTERS.month?ORANGE:NAVY2),borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:22}},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.parsed.y.toLocaleString()} leads`}}},scales:{y:{beginAtZero:true,ticks:{precision:0},grid:{color:"#eef2f7"}},x:{grid:{display:false}}}}});
+
+  /* Cost Per Lead by Month — same months/order as Leads Per Month, cost ÷ MQLs for each */
+  el("cplMonthPanel").classList.toggle("hidden",!hasAds);
+  if(hasAds){
+    const cplPerMonth=monthsChrono.map((m,i)=>{
+      const cost=adsSpendForMonth(m),mql=leadsPerMonth[i];
+      return (cost!=null&&mql)?Math.round(cost/mql*100)/100:null;
+    });
+    if(charts.cplMonth)charts.cplMonth.destroy();
+    charts.cplMonth=new Chart(el("cCplMonth"),{type:"bar",data:{labels:monthsChrono,datasets:[{data:cplPerMonth,backgroundColor:monthsChrono.map(m=>m===FILTERS.month?ORANGE:BLUE),borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:22}},plugins:{legend:{display:false},dataLabelPrefix:"$",tooltip:{callbacks:{label:c=>c.parsed.y!=null?` $${c.parsed.y.toFixed(2)} per lead`:" No ad spend data this month"}}},scales:{y:{beginAtZero:true,ticks:{callback:v=>"$"+v.toLocaleString()},grid:{color:"#eef2f7"}},x:{grid:{display:false}}}}});
+  }
 
   /* Funnel */
   const brokerEnt=rows.filter(r=>isBroker(get(r,"type"))&&parseLPM(get(r,"lpm"))>=750).length;
