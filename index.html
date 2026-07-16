@@ -343,7 +343,8 @@
     <div class="sechead"><h2>Monthly Trend</h2><div class="line"></div></div>
     <div class="panel">
       <h3>Leads Per Month</h3>
-      <p class="cap">Every month in the sheet, in true chronological order (Type/Source/Tier/Booked filters apply; not limited to the Month selector above).</p>
+      <p class="cap">Every month in the sheet, in true chronological order (Type/Source/Tier/Booked filters apply; not limited to the Month selector above). Also filters the CPL chart below.</p>
+      <div class="monthchips" id="trendMonthChips"></div>
       <div class="chartbox tall"><canvas id="cLeadsMonth"></canvas></div>
     </div>
 
@@ -443,7 +444,7 @@
       <div class="widgetbar"><span class="widgetlab">Conversions = actual leads from your Gravity sheet, matched by Campaign — not Google's self-reported conversions.</span></div>
       <div class="grid2">
         <div class="panel"><div class="wtitle"><h3>Spend by Campaign</h3><div class="rangewrap"><select class="wsel" id="adsRangeSpend"><option value="inherit">Section default</option><option value="thismonth">This Month</option><option value="today">Today</option><option value="yesterday">Yesterday</option><option value="7d">Last 7 Days</option><option value="30d">Last 30 Days</option><option value="90d">Last 90 Days</option><option value="all">All Time</option><option value="custom">Custom...</option></select><span class="customrange hidden" id="adsRangeSpendCustomWrap"><input type="date" class="dateinput" id="adsRangeSpendStart"><span>–</span><input type="date" class="dateinput" id="adsRangeSpendEnd"></span></div></div><p class="cap">Total cost, sorted.</p><div class="chartbox"><canvas id="cAdsSpend"></canvas></div></div>
-        <div class="panel"><div class="wtitle"><h3>Monthly Spend — Year to Date</h3><span class="widgetlab">always YTD, not affected by filters above</span></div><p class="cap">Every month of the current year. This month's bar keeps growing as new data comes in. Google Ads and Meta Ads spend both update automatically.</p><div class="chartbox"><canvas id="cAdsSpendMonthly"></canvas></div></div>
+        <div class="panel"><div class="wtitle"><h3>Monthly Spend — Year to Date</h3><span class="widgetlab">always YTD, not affected by filters above</span></div><p class="cap">Every month of the current year. This month's bar keeps growing as new data comes in. Google Ads and Meta Ads spend both update automatically.</p><div class="monthchips" id="ytdSpendMonthChips"></div><div class="chartbox"><canvas id="cAdsSpendMonthly"></canvas></div></div>
       </div>
     </div>
 
@@ -1007,10 +1008,33 @@ function renderAds(){
      Stacks Google Ads spend with Meta spend (if a Meta tab exists in the same Sheet) so the
      bar height reads as the true combined total. */
   const ytd=monthlySpendYTD();
+  const ytdChipWrap=el("ytdSpendMonthChips");
+  const savedYtd=loadYtdSpendMonths();
+  const ytdSelected=new Set(savedYtd!=null?savedYtd.filter(i=>i<=ytd.curMonth):ytd.labels.map((_,i)=>i));
+  if(ytdChipWrap){
+    const allSel=ytdSelected.size===ytd.labels.length;
+    ytdChipWrap.innerHTML=ytd.labels.map((lab,i)=>`<button class="mchip${ytdSelected.has(i)?" active":""}" data-mi="${i}">${lab}</button>`).join("")
+      +(ytd.labels.length?`<button class="mchip allbtn" id="ytdSpendMonthAllBtn">${allSel?"Clear all":"Select all"}</button>`:"");
+    ytdChipWrap.querySelectorAll(".mchip[data-mi]").forEach(btn=>{
+      btn.addEventListener("click",()=>{
+        const mi=+btn.dataset.mi,cur=new Set(ytdSelected);
+        if(cur.has(mi))cur.delete(mi);else cur.add(mi);
+        saveYtdSpendMonths([...cur]);
+        renderAds();
+      });
+    });
+    const ytdAllBtn=el("ytdSpendMonthAllBtn");
+    if(ytdAllBtn)ytdAllBtn.addEventListener("click",()=>{
+      saveYtdSpendMonths(allSel?[]:ytd.labels.map((_,i)=>i));
+      renderAds();
+    });
+  }
+  const ytdIdx=ytd.labels.map((_,i)=>i).filter(i=>ytdSelected.has(i));
+  const ytdLabelsF=ytdIdx.map(i=>ytd.labels[i]),ytdGoogleF=ytdIdx.map(i=>ytd.google[i]),ytdMetaF=ytdIdx.map(i=>ytd.meta[i]);
   if(charts.adsSpendMonthly)charts.adsSpendMonthly.destroy();
-  const ytdDatasets=[{label:"Google Ads",data:ytd.google,backgroundColor:NAVY2,borderRadius:4}];
-  if(ytd.showMeta)ytdDatasets.push({label:"Meta Ads",data:ytd.meta,backgroundColor:"#4267B2",borderRadius:4});
-  charts.adsSpendMonthly=new Chart(el("cAdsSpendMonthly"),{type:"bar",data:{labels:ytd.labels,datasets:ytdDatasets},options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:32}},plugins:{legend:{display:ytd.showMeta,position:"bottom",labels:{boxWidth:11}},dataLabelPrefix:"$",dataLabelTotal:true,tooltip:{callbacks:{label:c=>` ${c.dataset.label}: $${c.parsed.y.toLocaleString(undefined,{maximumFractionDigits:2})}`,footer:ytd.showMeta?items=>`Total: $${items.reduce((s,i)=>s+i.parsed.y,0).toLocaleString(undefined,{maximumFractionDigits:2})}`:undefined}}},scales:{x:{stacked:ytd.showMeta,grid:{display:false}},y:{stacked:ytd.showMeta,beginAtZero:true,ticks:{callback:v=>"$"+v.toLocaleString()},grid:{color:"#eef2f7"}}}}});
+  const ytdDatasets=[{label:"Google Ads",data:ytdGoogleF,backgroundColor:NAVY2,borderRadius:4}];
+  if(ytd.showMeta)ytdDatasets.push({label:"Meta Ads",data:ytdMetaF,backgroundColor:"#4267B2",borderRadius:4});
+  charts.adsSpendMonthly=new Chart(el("cAdsSpendMonthly"),{type:"bar",data:{labels:ytdLabelsF,datasets:ytdDatasets},options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:32}},plugins:{legend:{display:ytd.showMeta,position:"bottom",labels:{boxWidth:11}},dataLabelPrefix:"$",dataLabelTotal:true,tooltip:{callbacks:{label:c=>` ${c.dataset.label}: $${c.parsed.y.toLocaleString(undefined,{maximumFractionDigits:2})}`,footer:ytd.showMeta?items=>`Total: $${items.reduce((s,i)=>s+i.parsed.y,0).toLocaleString(undefined,{maximumFractionDigits:2})}`:undefined}}},scales:{x:{stacked:ytd.showMeta,grid:{display:false}},y:{stacked:ytd.showMeta,beginAtZero:true,ticks:{callback:v=>"$"+v.toLocaleString()},grid:{color:"#eef2f7"}}}}});
 
   renderRoi();
   renderMqlSqlMatrix();
@@ -1107,6 +1131,12 @@ function computeFunnelMQL(monthKey){
 const MATRIX_MONTHS_KEY="loadstopMqlSqlMonths";
 function loadMatrixMonths(){try{const v=JSON.parse(localStorage.getItem(MATRIX_MONTHS_KEY)||"null");return Array.isArray(v)?v:null;}catch(e){return null;}}
 function saveMatrixMonths(arr){try{localStorage.setItem(MATRIX_MONTHS_KEY,JSON.stringify(arr));}catch(e){}}
+const TREND_MONTHS_KEY="loadstopTrendMonths";
+function loadTrendMonths(){try{const v=JSON.parse(localStorage.getItem(TREND_MONTHS_KEY)||"null");return Array.isArray(v)?v:null;}catch(e){return null;}}
+function saveTrendMonths(arr){try{localStorage.setItem(TREND_MONTHS_KEY,JSON.stringify(arr));}catch(e){}}
+const YTD_SPEND_MONTHS_KEY="loadstopYtdSpendMonths";
+function loadYtdSpendMonths(){try{const v=JSON.parse(localStorage.getItem(YTD_SPEND_MONTHS_KEY)||"null");return Array.isArray(v)?v:null;}catch(e){return null;}}
+function saveYtdSpendMonths(arr){try{localStorage.setItem(YTD_SPEND_MONTHS_KEY,JSON.stringify(arr));}catch(e){}}
 function renderMqlSqlMatrix(){
   const panel=el("mqlSqlMatrixPanel"),wrap=el("mqlSqlMatrix"),chipWrap=el("mqlSqlMonthChips");
   if(!panel||!wrap)return;
@@ -1326,8 +1356,30 @@ function render(){
   if(cmpOn)buildMoM(M,C,rows,cmpRows);
 
   /* Leads Per Month — always on, true chronological order across calendar years */
-  const monthsChrono=allMonthsChrono();
+  const monthsChronoAll=allMonthsChrono();
   const fmAll=m=>applyFilters(RAW.filter(r=>get(r,"month")===m));
+  const trendChipWrap=el("trendMonthChips");
+  const savedTrend=loadTrendMonths();
+  const trendSelected=new Set(savedTrend!=null?savedTrend.filter(m=>monthsChronoAll.includes(m)):monthsChronoAll);
+  if(trendChipWrap){
+    const allSel=trendSelected.size===monthsChronoAll.length;
+    trendChipWrap.innerHTML=monthsChronoAll.map((m,i)=>`<button class="mchip${trendSelected.has(m)?" active":""}" data-idx="${i}">${esc(m)}</button>`).join("")
+      +(monthsChronoAll.length?`<button class="mchip allbtn" id="trendMonthAllBtn">${allSel?"Clear all":"Select all"}</button>`:"");
+    trendChipWrap.querySelectorAll(".mchip[data-idx]").forEach(btn=>{
+      btn.addEventListener("click",()=>{
+        const m=monthsChronoAll[+btn.dataset.idx],cur=new Set(trendSelected);
+        if(cur.has(m))cur.delete(m);else cur.add(m);
+        saveTrendMonths([...cur]);
+        render();
+      });
+    });
+    const allBtn=el("trendMonthAllBtn");
+    if(allBtn)allBtn.addEventListener("click",()=>{
+      saveTrendMonths(allSel?[]:monthsChronoAll.slice());
+      render();
+    });
+  }
+  const monthsChrono=monthsChronoAll.filter(m=>trendSelected.has(m));
   const leadsPerMonth=monthsChrono.map(m=>fmAll(m).length);
   if(charts.leadsMonth)charts.leadsMonth.destroy();
   charts.leadsMonth=new Chart(el("cLeadsMonth"),{type:"bar",data:{labels:monthsChrono,datasets:[{data:leadsPerMonth,backgroundColor:monthsChrono.map(m=>m===FILTERS.month?ORANGE:NAVY2),borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:22}},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.parsed.y.toLocaleString()} leads`}}},scales:{y:{beginAtZero:true,ticks:{precision:0},grid:{color:"#eef2f7"}},x:{grid:{display:false}}}}});
