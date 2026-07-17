@@ -1324,34 +1324,51 @@ function renderCustomCompare(){
     if(format==="percent")return rounded.toLocaleString(undefined,{maximumFractionDigits:1})+"%";
     return Math.round(rounded).toLocaleString();
   };
+
+  /* Every axis reserves the SAME fraction of chart height below zero (NEG_FRACTION), so "0" lands
+     at the same pixel row no matter which metric/scale a bar belongs to — no more staggered baselines.
+     A true negative value is drawn as a small fixed-depth tick into that reserved band (not scaled to
+     its real magnitude, which could be huge) while the label always shows the real number. */
+  const NEG_FRACTION=0.08;
+  const posMaxByFormat={};
+  usedFormats.forEach(f=>{
+    const vals=activeMetrics.filter(m=>m.format===f).flatMap(m=>activeIdx.map(i=>m.vals[i]));
+    posMaxByFormat[f]=Math.max(1,...vals.map(v=>Math.max(0,v)));
+  });
+  const negTickByFormat={};
+  usedFormats.forEach(f=>{negTickByFormat[f]=-posMaxByFormat[f]*NEG_FRACTION*0.7;});
+  const clampForPlot=(v,format)=>v<0?negTickByFormat[format]:v;
+
   const datasets=activeMetrics.map(m=>({
-    label:m.label,data:activeIdx.map(i=>m.vals[i]),backgroundColor:m.color,borderRadius:4,yAxisID:"y_"+m.format,
-    dataLabelFmt:v=>fmtValue(v,m.format),_metric:m
+    label:m.label,data:activeIdx.map(i=>clampForPlot(m.vals[i],m.format)),backgroundColor:m.color,borderRadius:4,yAxisID:"y_"+m.format,
+    dataLabelFmt:v=>fmtValue(v,m.format),_metric:m,_trueVals:activeIdx.map(i=>m.vals[i])
   }));
   /* Trend line overlay — only makes sense with 2+ months on screen; one line per active metric,
      same color/axis as its bar, hidden from the legend so it doesn't duplicate the bar's entry. */
   if(activeIdx.length>1){
     activeMetrics.forEach(m=>{
       datasets.push({
-        type:"line",label:m.label,data:activeIdx.map(i=>m.vals[i]),
+        type:"line",label:m.label,data:activeIdx.map(i=>clampForPlot(m.vals[i],m.format)),
         borderColor:m.color,backgroundColor:m.color,yAxisID:"y_"+m.format,
-        borderWidth:2,pointRadius:3,pointBackgroundColor:m.color,fill:false,tension:0.25,_metric:m
+        borderWidth:2,pointRadius:3,pointBackgroundColor:m.color,fill:false,tension:0.25,_metric:m,_trueVals:activeIdx.map(i=>m.vals[i])
       });
     });
   }
 
   const scales={x:{grid:{display:false}}};
-  usedFormats.forEach((fmt,i)=>{
-    scales["y_"+fmt]={type:"linear",position:i===0?"left":"right",beginAtZero:true,
+  usedFormats.forEach((f,i)=>{
+    const posMax=posMaxByFormat[f];
+    scales["y_"+f]={type:"linear",position:i===0?"left":"right",
+      min:-posMax*NEG_FRACTION/(1-NEG_FRACTION),max:posMax,
       grid:{display:i===0,color:"#eef2f7"},
-      ticks:{callback:v=>fmt==="currency"?"$"+v.toLocaleString():fmt==="percent"?v+"%":v.toLocaleString()},
-      title:{display:true,text:COMPARE_FMT_LABEL[fmt]}};
+      ticks:{callback:v=>f==="currency"?"$"+v.toLocaleString():f==="percent"?v+"%":v.toLocaleString()},
+      title:{display:true,text:COMPARE_FMT_LABEL[f]}};
   });
 
   if(charts.customCompare)charts.customCompare.destroy();
   charts.customCompare=new Chart(el("cCustomCompare"),{type:"bar",data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:22}},
     plugins:{legend:{display:true,position:"bottom",labels:{boxWidth:11,filter:item=>datasets[item.datasetIndex]&&datasets[item.datasetIndex].type!=="line"}},
-      tooltip:{callbacks:{label:c=>{const ds=c.chart.data.datasets[c.datasetIndex],m=ds._metric,v=c.parsed.y;
+      tooltip:{callbacks:{label:c=>{const ds=c.chart.data.datasets[c.datasetIndex],m=ds._metric,v=ds._trueVals?ds._trueVals[c.dataIndex]:c.parsed.y;
         return ` ${m.label}${ds.type==="line"?" (trend)":""}: ${fmtValue(v,m.format)}`;}}}},
     scales}});
 }
@@ -1920,9 +1937,10 @@ const dataLabelsPlugin={
       if(dataset.type==="line"&&!isLine)return; // trend-overlay lines in a mixed bar+line chart don't get their own labels — the bars already show the value
       const dsFmt=dataset.dataLabelFmt||fmt;
       meta.data.forEach((el,idx)=>{
-        const raw=dataset.data[idx];
-        const v=typeof raw==="number"?raw:parseFloat(raw);
-        if(raw==null||isNaN(v)||v===0)return;
+        const plotRaw=dataset.data[idx];
+        const trueRaw=dataset._trueVals?dataset._trueVals[idx]:plotRaw;
+        const v=typeof trueRaw==="number"?trueRaw:parseFloat(trueRaw);
+        if(trueRaw==null||isNaN(v)||v===0)return;
         ctx.save();
         ctx.font="700 11px -apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif";
         ctx.textAlign="center";
@@ -1941,7 +1959,8 @@ const dataLabelsPlugin={
           ctx.fillStyle="#16232f";ctx.textAlign="left";ctx.textBaseline="middle";
           ctx.fillText(dsFmt(v),el.x+6,el.y);
         }else{
-          haloText(dsFmt(v),el.x,el.y-4);
+          const topY=el.base!=null?Math.min(el.y,el.base):el.y; // works for bars hanging below zero too — label always sits above the visible bar
+          haloText(dsFmt(v),el.x,topY-4);
         }
         ctx.restore();
       });
