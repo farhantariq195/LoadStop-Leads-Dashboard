@@ -1253,6 +1253,7 @@ function compareMetricDefs(){
     {key:"spend",label:"Ad Spend",format:"currency",color:"#4267B2",vals:spendByMonth},
     {key:"cpl",label:"Cost Per Lead",format:"currency",color:"#e8b98a",vals:idx.map(i=>mqlByMonth[i]?Math.round(spendByMonth[i]/mqlByMonth[i]*100)/100:0)},
     {key:"roi",label:"ROI % (MQL Deal Amount vs Google Spend)",format:"percent",color:"#3a6ea5",vals:idx.map(i=>googleSpendByMonth[i]?Math.round((mqlDealByMonth[i]-googleSpendByMonth[i])/googleSpendByMonth[i]*1000)/10:0)},
+    {key:"roiTotal",label:"ROI % (Total Deal Amount vs Google Spend)",format:"percent",color:"#6b4aa0",vals:idx.map(i=>googleSpendByMonth[i]?Math.round((totalDealByMonth[i]-googleSpendByMonth[i])/googleSpendByMonth[i]*1000)/10:0)},
     {key:"convRate",label:"Sales Conversion % (Closed ÷ SQL)",format:"percent",color:"#d98841",vals:idx.map(i=>sqlByMonth[i]?Math.round(closedByMonth[i]/sqlByMonth[i]*1000)/10:0)}
   ];
   return {ytd,defs};
