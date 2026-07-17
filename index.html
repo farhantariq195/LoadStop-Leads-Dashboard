@@ -488,7 +488,7 @@ let FILTERS={month:"__all", cmp:"none", type:"all", source:"all", tier:"all", bo
 let ADS_RAW=[], ADS_HEAD={}, hasAds=false;
 let META_RAW=[], META_HEAD={}, hasMeta=false, META_MONTHLY={};
 let hasSql=false, SQL_MONTHLY={}, DEMOS_MONTHLY={};
-let CONNECTED_MONTHLY={}, QUALIFIED_MONTHLY={}, CLOSED_MONTHLY={}, TOTAL_DEAL_MONTHLY={}, MQL_DEAL_MONTHLY={};
+let CONNECTED_MONTHLY={}, QUALIFIED_MONTHLY={}, TOTAL_CLOSED_MONTHLY={}, MQL_CLOSED_MONTHLY={}, TOTAL_DEAL_MONTHLY={}, MQL_DEAL_MONTHLY={};
 let MONTH_ORDER={};
 
 /* ---------- helpers ---------- */
@@ -838,11 +838,12 @@ function ingestSql(objArray){
   const demoCol=findCol(h,["Demos Scheduled","Demos","Demo Scheduled"]);
   const connectedCol=findCol(h,["Connected"]);
   const qualifiedCol=findCol(h,["Qualified"]);
-  const closedCol=findCol(h,["Closed Deals","Closed","Deals Closed"]);
+  const totalClosedCol=findCol(h,["Total New Closed Deals","Total Closed Deals","Closed Deals","Closed","Deals Closed"]);
+  const mqlClosedCol=findCol(h,["MQL New Closed Deals","MQL Closed Deals"]);
   const totalDealCol=findCol(h,["Total Deal Amount","Total Deal Value"]);
   const mqlDealCol=findCol(h,["MQL Deal Amount","MQL Deal Value"]);
   if(!monthCol||!sqlCol)return;
-  SQL_MONTHLY={};DEMOS_MONTHLY={};CONNECTED_MONTHLY={};QUALIFIED_MONTHLY={};CLOSED_MONTHLY={};TOTAL_DEAL_MONTHLY={};MQL_DEAL_MONTHLY={};
+  SQL_MONTHLY={};DEMOS_MONTHLY={};CONNECTED_MONTHLY={};QUALIFIED_MONTHLY={};TOTAL_CLOSED_MONTHLY={};MQL_CLOSED_MONTHLY={};TOTAL_DEAL_MONTHLY={};MQL_DEAL_MONTHLY={};
   const addTo=(store,mi,raw,isMoney)=>{
     const v=isMoney?cleanFloat(raw):cleanInt(raw);
     if(v!==null)store[mi]=(store[mi]||0)+v;
@@ -854,7 +855,8 @@ function ingestSql(objArray){
     if(demoCol)addTo(DEMOS_MONTHLY,mi,r[demoCol],false);
     if(connectedCol)addTo(CONNECTED_MONTHLY,mi,r[connectedCol],false);
     if(qualifiedCol)addTo(QUALIFIED_MONTHLY,mi,r[qualifiedCol],false);
-    if(closedCol)addTo(CLOSED_MONTHLY,mi,r[closedCol],false);
+    if(totalClosedCol)addTo(TOTAL_CLOSED_MONTHLY,mi,r[totalClosedCol],false);
+    if(mqlClosedCol)addTo(MQL_CLOSED_MONTHLY,mi,r[mqlClosedCol],false);
     if(totalDealCol)addTo(TOTAL_DEAL_MONTHLY,mi,r[totalDealCol],true);
     if(mqlDealCol)addTo(MQL_DEAL_MONTHLY,mi,r[mqlDealCol],true);
   });
@@ -869,7 +871,7 @@ function disconnectAds(){
   hasAds=false;ADS_RAW=[];ADS_HEAD={};
   hasMeta=false;META_RAW=[];META_HEAD={};META_MONTHLY={};
   hasSql=false;SQL_MONTHLY={};DEMOS_MONTHLY={};
-  CONNECTED_MONTHLY={};QUALIFIED_MONTHLY={};CLOSED_MONTHLY={};TOTAL_DEAL_MONTHLY={};MQL_DEAL_MONTHLY={};
+  CONNECTED_MONTHLY={};QUALIFIED_MONTHLY={};TOTAL_CLOSED_MONTHLY={};MQL_CLOSED_MONTHLY={};TOTAL_DEAL_MONTHLY={};MQL_DEAL_MONTHLY={};
   el("adsConnectForm").classList.remove("hidden");
   el("adsConnectedBadge").classList.add("hidden");
   el("adsSectionHead").classList.add("hidden");
@@ -1238,7 +1240,8 @@ function compareMetricDefs(){
   const spendByMonth=idx.map(i=>(ytd.google[i]||0)+(ytd.meta[i]||0));
   const googleSpendByMonth=idx.map(i=>ytd.google[i]||0);
   const sqlByMonth=idx.map(i=>SQL_MONTHLY[i]||0);
-  const closedByMonth=idx.map(i=>CLOSED_MONTHLY[i]||0);
+  const totalClosedByMonth=idx.map(i=>TOTAL_CLOSED_MONTHLY[i]||0);
+  const mqlClosedByMonth=idx.map(i=>MQL_CLOSED_MONTHLY[i]||0);
   const totalDealByMonth=idx.map(i=>TOTAL_DEAL_MONTHLY[i]||0);
   const mqlDealByMonth=idx.map(i=>MQL_DEAL_MONTHLY[i]||0);
   const defs=[
@@ -1247,14 +1250,16 @@ function compareMetricDefs(){
     {key:"demos",label:"Demos Scheduled",format:"count",color:BLUE,vals:idx.map(i=>DEMOS_MONTHLY[i]||0)},
     {key:"connected",label:"Connected",format:"count",color:"#8bb4e0",vals:idx.map(i=>CONNECTED_MONTHLY[i]||0)},
     {key:"qualified",label:"Qualified",format:"count",color:"#5b8fd0",vals:idx.map(i=>QUALIFIED_MONTHLY[i]||0)},
-    {key:"closed",label:"Closed Deals",format:"count",color:"#1a7f45",vals:closedByMonth},
+    {key:"totalClosed",label:"Total New Closed Deals",format:"count",color:"#1a7f45",vals:totalClosedByMonth},
+    {key:"mqlClosed",label:"MQL New Closed Deals",format:"count",color:"#2fa360",vals:mqlClosedByMonth},
     {key:"totalDeal",label:"Total Deal Amount",format:"currency",color:"#123a63",vals:totalDealByMonth},
     {key:"mqlDeal",label:"MQL Deal Amount",format:"currency",color:"#c96b1e",vals:mqlDealByMonth},
     {key:"spend",label:"Ad Spend",format:"currency",color:"#4267B2",vals:spendByMonth},
     {key:"cpl",label:"Cost Per Lead",format:"currency",color:"#e8b98a",vals:idx.map(i=>mqlByMonth[i]?Math.round(spendByMonth[i]/mqlByMonth[i]*100)/100:0)},
     {key:"roi",label:"ROI % (MQL Deal Amount vs Google Spend)",format:"percent",color:"#3a6ea5",vals:idx.map(i=>googleSpendByMonth[i]?Math.round((mqlDealByMonth[i]-googleSpendByMonth[i])/googleSpendByMonth[i]*1000)/10:0)},
     {key:"roiTotal",label:"ROI % (Total Deal Amount vs Google Spend)",format:"percent",color:"#6b4aa0",vals:idx.map(i=>googleSpendByMonth[i]?Math.round((totalDealByMonth[i]-googleSpendByMonth[i])/googleSpendByMonth[i]*1000)/10:0)},
-    {key:"convRate",label:"Sales Conversion % (Closed ÷ SQL)",format:"percent",color:"#d98841",vals:idx.map(i=>sqlByMonth[i]?Math.round(closedByMonth[i]/sqlByMonth[i]*1000)/10:0)}
+    {key:"convRate",label:"Sales Conversion % (Total Closed ÷ SQL)",format:"percent",color:"#d98841",vals:idx.map(i=>sqlByMonth[i]?Math.round(totalClosedByMonth[i]/sqlByMonth[i]*1000)/10:0)},
+    {key:"convRateMql",label:"Sales Conversion % (MQL Closed ÷ SQL)",format:"percent",color:"#e0a458",vals:idx.map(i=>sqlByMonth[i]?Math.round(mqlClosedByMonth[i]/sqlByMonth[i]*1000)/10:0)}
   ];
   return {ytd,defs};
 }
@@ -1268,7 +1273,7 @@ function renderCustomCompare(){
 
   const metricWrap=el("compareMetricChips");
   const savedMetrics=loadCompareMetrics();
-  const selMetrics=new Set(savedMetrics!=null?savedMetrics.filter(k=>defs.some(d=>d.key===k)):["mql","closed"]);
+  const selMetrics=new Set(savedMetrics!=null?savedMetrics.filter(k=>defs.some(d=>d.key===k)):["mql","totalClosed"]);
   if(metricWrap){
     metricWrap.innerHTML=defs.map(d=>`<button class="mchip${selMetrics.has(d.key)?" active":""}" data-mk="${d.key}">${esc(d.label)}</button>`).join("");
     metricWrap.querySelectorAll(".mchip[data-mk]").forEach(btn=>{
