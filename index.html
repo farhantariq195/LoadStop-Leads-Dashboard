@@ -460,6 +460,17 @@
     <div class="sechead"><h2>Enterprise Leads</h2><div class="line"></div></div>
     <div class="panel"><h3>Enterprise Qualified</h3><p class="cap">Carrier/Hybrid 80+ FMCSA trucks, or Broker 300+ loads/month. Sortable.</p><div class="scroll"><table id="tEnt"></table></div></div>
 
+    <div class="sechead hidden" id="customCompareHead"><h2>Custom Performance Comparison</h2><div class="line"></div></div>
+    <div class="panel hidden" id="customComparePanel">
+      <p class="cap">Pick any metrics and any months to build your own comparison chart — mix leads, spend, deals, and conversion rates however you need.</p>
+      <div class="widgetlab" style="margin-top:8px">Metrics</div>
+      <div class="monthchips" id="compareMetricChips"></div>
+      <div class="widgetlab" style="margin-top:10px">Months</div>
+      <div class="monthchips" id="compareMonthChips"></div>
+      <div id="compareEmptyMsg" class="cap hidden" style="margin:14px 2px 0">Pick at least one metric and one month above to see a chart.</div>
+      <div class="chartbox tall" style="margin-top:14px" id="compareChartWrap"><canvas id="cCustomCompare"></canvas></div>
+    </div>
+
     <div class="foot">Generated in-browser · LoadStop Lead Intelligence · FMCSA Power Units = authoritative fleet signal · All entries treated as MQLs</div>
   </div>
 </div>
@@ -477,6 +488,7 @@ let FILTERS={month:"__all", cmp:"none", type:"all", source:"all", tier:"all", bo
 let ADS_RAW=[], ADS_HEAD={}, hasAds=false;
 let META_RAW=[], META_HEAD={}, hasMeta=false, META_MONTHLY={};
 let hasSql=false, SQL_MONTHLY={}, DEMOS_MONTHLY={};
+let CONNECTED_MONTHLY={}, QUALIFIED_MONTHLY={}, CLOSED_MONTHLY={}, TOTAL_DEAL_MONTHLY={}, MQL_DEAL_MONTHLY={};
 let MONTH_ORDER={};
 
 /* ---------- helpers ---------- */
@@ -824,17 +836,27 @@ function ingestSql(objArray){
   const monthCol=findCol(h,["Month"]);
   const sqlCol=findCol(h,["SQL","SQLs","SQL Count"]);
   const demoCol=findCol(h,["Demos Scheduled","Demos","Demo Scheduled"]);
+  const connectedCol=findCol(h,["Connected"]);
+  const qualifiedCol=findCol(h,["Qualified"]);
+  const closedCol=findCol(h,["Closed Deals","Closed","Deals Closed"]);
+  const totalDealCol=findCol(h,["Total Deal Amount","Total Deal Value"]);
+  const mqlDealCol=findCol(h,["MQL Deal Amount","MQL Deal Value"]);
   if(!monthCol||!sqlCol)return;
-  SQL_MONTHLY={};DEMOS_MONTHLY={};
+  SQL_MONTHLY={};DEMOS_MONTHLY={};CONNECTED_MONTHLY={};QUALIFIED_MONTHLY={};CLOSED_MONTHLY={};TOTAL_DEAL_MONTHLY={};MQL_DEAL_MONTHLY={};
+  const addTo=(store,mi,raw,isMoney)=>{
+    const v=isMoney?cleanFloat(raw):cleanInt(raw);
+    if(v!==null)store[mi]=(store[mi]||0)+v;
+  };
   clean.forEach(r=>{
     const mi=MONTHS.indexOf(String(r[monthCol]||"").trim().toLowerCase());
     if(mi<0)return;
-    const sv=cleanInt(r[sqlCol]);
-    if(sv!==null)SQL_MONTHLY[mi]=(SQL_MONTHLY[mi]||0)+sv;
-    if(demoCol){
-      const dv=cleanInt(r[demoCol]);
-      if(dv!==null)DEMOS_MONTHLY[mi]=(DEMOS_MONTHLY[mi]||0)+dv;
-    }
+    addTo(SQL_MONTHLY,mi,r[sqlCol],false);
+    if(demoCol)addTo(DEMOS_MONTHLY,mi,r[demoCol],false);
+    if(connectedCol)addTo(CONNECTED_MONTHLY,mi,r[connectedCol],false);
+    if(qualifiedCol)addTo(QUALIFIED_MONTHLY,mi,r[qualifiedCol],false);
+    if(closedCol)addTo(CLOSED_MONTHLY,mi,r[closedCol],false);
+    if(totalDealCol)addTo(TOTAL_DEAL_MONTHLY,mi,r[totalDealCol],true);
+    if(mqlDealCol)addTo(MQL_DEAL_MONTHLY,mi,r[mqlDealCol],true);
   });
   hasSql=true;
   renderFunnel();
@@ -847,6 +869,7 @@ function disconnectAds(){
   hasAds=false;ADS_RAW=[];ADS_HEAD={};
   hasMeta=false;META_RAW=[];META_HEAD={};META_MONTHLY={};
   hasSql=false;SQL_MONTHLY={};DEMOS_MONTHLY={};
+  CONNECTED_MONTHLY={};QUALIFIED_MONTHLY={};CLOSED_MONTHLY={};TOTAL_DEAL_MONTHLY={};MQL_DEAL_MONTHLY={};
   el("adsConnectForm").classList.remove("hidden");
   el("adsConnectedBadge").classList.add("hidden");
   el("adsSectionHead").classList.add("hidden");
@@ -1038,6 +1061,7 @@ function renderAds(){
 
   renderRoi();
   renderMqlSqlMatrix();
+  renderCustomCompare();
 }
 /* Combined Google + Meta ad spend, Jan through the current month of the current year.
    Shared by the YTD spend chart and the MQL→SQL performance matrix so both read the same numbers. */
@@ -1137,6 +1161,12 @@ function saveTrendMonths(arr){try{localStorage.setItem(TREND_MONTHS_KEY,JSON.str
 const YTD_SPEND_MONTHS_KEY="loadstopYtdSpendMonths";
 function loadYtdSpendMonths(){try{const v=JSON.parse(localStorage.getItem(YTD_SPEND_MONTHS_KEY)||"null");return Array.isArray(v)?v:null;}catch(e){return null;}}
 function saveYtdSpendMonths(arr){try{localStorage.setItem(YTD_SPEND_MONTHS_KEY,JSON.stringify(arr));}catch(e){}}
+const COMPARE_METRICS_KEY="loadstopCompareMetrics";
+function loadCompareMetrics(){try{const v=JSON.parse(localStorage.getItem(COMPARE_METRICS_KEY)||"null");return Array.isArray(v)?v:null;}catch(e){return null;}}
+function saveCompareMetrics(arr){try{localStorage.setItem(COMPARE_METRICS_KEY,JSON.stringify(arr));}catch(e){}}
+const COMPARE_MONTHS_KEY="loadstopCompareMonths";
+function loadCompareMonths(){try{const v=JSON.parse(localStorage.getItem(COMPARE_MONTHS_KEY)||"null");return Array.isArray(v)?v:null;}catch(e){return null;}}
+function saveCompareMonths(arr){try{localStorage.setItem(COMPARE_MONTHS_KEY,JSON.stringify(arr));}catch(e){}}
 function renderMqlSqlMatrix(){
   const panel=el("mqlSqlMatrixPanel"),wrap=el("mqlSqlMatrix"),chipWrap=el("mqlSqlMonthChips");
   if(!panel||!wrap)return;
@@ -1195,6 +1225,112 @@ function renderMqlSqlMatrix(){
   }).join("");
   wrap.innerHTML=`<table class="matrixtable"><thead><tr><th>Month</th><th class="num">Ad Spend</th><th class="num">MQL</th><th class="num">MQL → SQL</th><th class="num">SQL</th><th class="num">SQL → Demo</th><th class="num">Demo Scheduled</th></tr></thead><tbody>${rowsHtml}</tbody></table>`
     +(hasSql?"":`<p class="cap" style="margin:10px 2px 0">SQL and Demo Scheduled columns will fill in automatically once a "SQL Count" tab exists in your connected Ads Sheet.</p>`);
+}
+/* Custom Performance Comparison — pick any metrics + any months, builds a grouped-bar chart.
+   Metrics with different units (count/currency/percent) each get their own Y-axis so a $ metric
+   and a % metric can sit side by side without either one flattening the other. */
+const COMPARE_FMT_LABEL={count:"Count",currency:"$",percent:"%"};
+function compareMetricDefs(){
+  const ytd=monthlySpendYTD();
+  const n=ytd.labels.length;
+  const idx=[...Array(n).keys()];
+  const mqlByMonth=idx.map(i=>computeFunnelMQL(ytd.year+"-"+String(i+1).padStart(2,"0")));
+  const spendByMonth=idx.map(i=>(ytd.google[i]||0)+(ytd.meta[i]||0));
+  const sqlByMonth=idx.map(i=>SQL_MONTHLY[i]||0);
+  const closedByMonth=idx.map(i=>CLOSED_MONTHLY[i]||0);
+  const totalDealByMonth=idx.map(i=>TOTAL_DEAL_MONTHLY[i]||0);
+  const defs=[
+    {key:"mql",label:"MQL",format:"count",color:NAVY2,vals:mqlByMonth},
+    {key:"sql",label:"SQL",format:"count",color:ORANGE,vals:sqlByMonth},
+    {key:"demos",label:"Demos Scheduled",format:"count",color:BLUE,vals:idx.map(i=>DEMOS_MONTHLY[i]||0)},
+    {key:"connected",label:"Connected",format:"count",color:"#8bb4e0",vals:idx.map(i=>CONNECTED_MONTHLY[i]||0)},
+    {key:"qualified",label:"Qualified",format:"count",color:"#5b8fd0",vals:idx.map(i=>QUALIFIED_MONTHLY[i]||0)},
+    {key:"closed",label:"Closed Deals",format:"count",color:"#1a7f45",vals:closedByMonth},
+    {key:"totalDeal",label:"Total Deal Amount",format:"currency",color:"#123a63",vals:totalDealByMonth},
+    {key:"mqlDeal",label:"MQL Deal Amount",format:"currency",color:"#c96b1e",vals:idx.map(i=>MQL_DEAL_MONTHLY[i]||0)},
+    {key:"spend",label:"Ad Spend",format:"currency",color:"#4267B2",vals:spendByMonth},
+    {key:"cpl",label:"Cost Per Lead",format:"currency",color:"#e8b98a",vals:idx.map(i=>mqlByMonth[i]?Math.round(spendByMonth[i]/mqlByMonth[i]*100)/100:0)},
+    {key:"roi",label:"ROI %",format:"percent",color:"#3a6ea5",vals:idx.map(i=>spendByMonth[i]?Math.round((totalDealByMonth[i]-spendByMonth[i])/spendByMonth[i]*1000)/10:0)},
+    {key:"convRate",label:"Sales Conversion % (Closed ÷ SQL)",format:"percent",color:"#d98841",vals:idx.map(i=>sqlByMonth[i]?Math.round(closedByMonth[i]/sqlByMonth[i]*1000)/10:0)}
+  ];
+  return {ytd,defs};
+}
+function renderCustomCompare(){
+  const head=el("customCompareHead"),panel=el("customComparePanel");
+  if(!panel)return;
+  if(!hasAds){head.classList.add("hidden");panel.classList.add("hidden");return;}
+  head.classList.remove("hidden");panel.classList.remove("hidden");
+
+  const {ytd,defs}=compareMetricDefs();
+
+  const metricWrap=el("compareMetricChips");
+  const savedMetrics=loadCompareMetrics();
+  const selMetrics=new Set(savedMetrics!=null?savedMetrics.filter(k=>defs.some(d=>d.key===k)):["mql","closed"]);
+  if(metricWrap){
+    metricWrap.innerHTML=defs.map(d=>`<button class="mchip${selMetrics.has(d.key)?" active":""}" data-mk="${d.key}">${esc(d.label)}</button>`).join("");
+    metricWrap.querySelectorAll(".mchip[data-mk]").forEach(btn=>{
+      btn.addEventListener("click",()=>{
+        const k=btn.dataset.mk,cur=new Set(selMetrics);
+        if(cur.has(k))cur.delete(k);else cur.add(k);
+        saveCompareMetrics([...cur]);
+        renderCustomCompare();
+      });
+    });
+  }
+
+  const monthWrap=el("compareMonthChips");
+  const savedMonths=loadCompareMonths();
+  const selMonths=new Set(savedMonths!=null?savedMonths.filter(i=>i<=ytd.curMonth):ytd.labels.map((_,i)=>i));
+  if(monthWrap){
+    const allSel=selMonths.size===ytd.labels.length;
+    monthWrap.innerHTML=ytd.labels.map((lab,i)=>`<button class="mchip${selMonths.has(i)?" active":""}" data-mi="${i}">${lab}</button>`).join("")
+      +(ytd.labels.length?`<button class="mchip allbtn" id="compareMonthAllBtn">${allSel?"Clear all":"Select all"}</button>`:"");
+    monthWrap.querySelectorAll(".mchip[data-mi]").forEach(btn=>{
+      btn.addEventListener("click",()=>{
+        const mi=+btn.dataset.mi,cur=new Set(selMonths);
+        if(cur.has(mi))cur.delete(mi);else cur.add(mi);
+        saveCompareMonths([...cur]);
+        renderCustomCompare();
+      });
+    });
+    const allBtn=el("compareMonthAllBtn");
+    if(allBtn)allBtn.addEventListener("click",()=>{
+      saveCompareMonths(allSel?[]:ytd.labels.map((_,i)=>i));
+      renderCustomCompare();
+    });
+  }
+
+  const activeMetrics=defs.filter(d=>selMetrics.has(d.key));
+  const activeIdx=ytd.labels.map((_,i)=>i).filter(i=>selMonths.has(i));
+  const emptyMsg=el("compareEmptyMsg"),chartWrap=el("compareChartWrap");
+  if(!activeMetrics.length||!activeIdx.length){
+    if(emptyMsg)emptyMsg.classList.remove("hidden");
+    if(chartWrap)chartWrap.classList.add("hidden");
+    if(charts.customCompare){charts.customCompare.destroy();charts.customCompare=null;}
+    return;
+  }
+  if(emptyMsg)emptyMsg.classList.add("hidden");
+  if(chartWrap)chartWrap.classList.remove("hidden");
+
+  const labels=activeIdx.map(i=>ytd.labels[i]);
+  const usedFormats=["count","currency","percent"].filter(f=>activeMetrics.some(m=>m.format===f));
+  const datasets=activeMetrics.map(m=>({label:m.label,data:activeIdx.map(i=>m.vals[i]),backgroundColor:m.color,borderRadius:4,yAxisID:"y_"+m.format}));
+
+  const scales={x:{grid:{display:false}}};
+  usedFormats.forEach((fmt,i)=>{
+    scales["y_"+fmt]={type:"linear",position:i===0?"left":"right",beginAtZero:true,
+      grid:{display:i===0,color:"#eef2f7"},
+      ticks:{callback:v=>fmt==="currency"?"$"+v.toLocaleString():fmt==="percent"?v+"%":v.toLocaleString()},
+      title:{display:true,text:COMPARE_FMT_LABEL[fmt]}};
+  });
+
+  if(charts.customCompare)charts.customCompare.destroy();
+  charts.customCompare=new Chart(el("cCustomCompare"),{type:"bar",data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:10}},
+    plugins:{legend:{display:true,position:"bottom",labels:{boxWidth:11}},dataLabelDisabled:true,
+      tooltip:{callbacks:{label:c=>{const m=activeMetrics[c.datasetIndex],v=c.parsed.y;
+        const txt=m.format==="currency"?"$"+v.toLocaleString(undefined,{maximumFractionDigits:0}):m.format==="percent"?v+"%":v.toLocaleString();
+        return ` ${m.label}: ${txt}`;}}}},
+    scales}});
 }
 function saveFunnelInputs(){
   const data=loadFunnelData(),key=el("funnelMonth").value;
@@ -1734,6 +1870,7 @@ const dataLabelsPlugin={
     const sx=chart.options.scales&&chart.options.scales.x,sy=chart.options.scales&&chart.options.scales.y;
     const stacked=!!((sx&&sx.stacked)||(sy&&sy.stacked));
     const p=chart.options.plugins||{};
+    if(p.dataLabelDisabled)return;
     const prefix=p.dataLabelPrefix||"",suffix=p.dataLabelSuffix||"";
     const fmt=v=>{
       const rounded=Math.round(v*100)/100;
