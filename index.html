@@ -1314,7 +1314,29 @@ function renderCustomCompare(){
 
   const labels=activeIdx.map(i=>ytd.labels[i]);
   const usedFormats=["count","currency","percent"].filter(f=>activeMetrics.some(m=>m.format===f));
-  const datasets=activeMetrics.map(m=>({label:m.label,data:activeIdx.map(i=>m.vals[i]),backgroundColor:m.color,borderRadius:4,yAxisID:"y_"+m.format}));
+  const fmtValue=(v,format)=>{
+    const rounded=Math.round(v*100)/100;
+    if(format==="currency"){
+      return Math.abs(rounded)>=1000?"$"+(rounded/1000).toLocaleString(undefined,{maximumFractionDigits:1})+"K":"$"+rounded.toLocaleString(undefined,{maximumFractionDigits:0});
+    }
+    if(format==="percent")return rounded.toLocaleString(undefined,{maximumFractionDigits:1})+"%";
+    return Math.round(rounded).toLocaleString();
+  };
+  const datasets=activeMetrics.map(m=>({
+    label:m.label,data:activeIdx.map(i=>m.vals[i]),backgroundColor:m.color,borderRadius:4,yAxisID:"y_"+m.format,
+    dataLabelFmt:v=>fmtValue(v,m.format),_metric:m
+  }));
+  /* Trend line overlay — only makes sense with 2+ months on screen; one line per active metric,
+     same color/axis as its bar, hidden from the legend so it doesn't duplicate the bar's entry. */
+  if(activeIdx.length>1){
+    activeMetrics.forEach(m=>{
+      datasets.push({
+        type:"line",label:m.label,data:activeIdx.map(i=>m.vals[i]),
+        borderColor:m.color,backgroundColor:m.color,yAxisID:"y_"+m.format,
+        borderWidth:2,pointRadius:3,pointBackgroundColor:m.color,fill:false,tension:0.25,_metric:m
+      });
+    });
+  }
 
   const scales={x:{grid:{display:false}}};
   usedFormats.forEach((fmt,i)=>{
@@ -1325,11 +1347,10 @@ function renderCustomCompare(){
   });
 
   if(charts.customCompare)charts.customCompare.destroy();
-  charts.customCompare=new Chart(el("cCustomCompare"),{type:"bar",data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:10}},
-    plugins:{legend:{display:true,position:"bottom",labels:{boxWidth:11}},dataLabelDisabled:true,
-      tooltip:{callbacks:{label:c=>{const m=activeMetrics[c.datasetIndex],v=c.parsed.y;
-        const txt=m.format==="currency"?"$"+v.toLocaleString(undefined,{maximumFractionDigits:0}):m.format==="percent"?v+"%":v.toLocaleString();
-        return ` ${m.label}: ${txt}`;}}}},
+  charts.customCompare=new Chart(el("cCustomCompare"),{type:"bar",data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:22}},
+    plugins:{legend:{display:true,position:"bottom",labels:{boxWidth:11,filter:item=>datasets[item.datasetIndex]&&datasets[item.datasetIndex].type!=="line"}},
+      tooltip:{callbacks:{label:c=>{const ds=c.chart.data.datasets[c.datasetIndex],m=ds._metric,v=c.parsed.y;
+        return ` ${m.label}${ds.type==="line"?" (trend)":""}: ${fmtValue(v,m.format)}`;}}}},
     scales}});
 }
 function saveFunnelInputs(){
@@ -1885,6 +1906,8 @@ const dataLabelsPlugin={
     chart.data.datasets.forEach((dataset,di)=>{
       const meta=chart.getDatasetMeta(di);
       if(meta.hidden)return;
+      if(dataset.type==="line"&&!isLine)return; // trend-overlay lines in a mixed bar+line chart don't get their own labels — the bars already show the value
+      const dsFmt=dataset.dataLabelFmt||fmt;
       meta.data.forEach((el,idx)=>{
         const raw=dataset.data[idx];
         const v=typeof raw==="number"?raw:parseFloat(raw);
@@ -1895,21 +1918,21 @@ const dataLabelsPlugin={
         if(isPie){
           const pos=el.tooltipPosition();
           ctx.fillStyle="#fff";ctx.textBaseline="middle";
-          ctx.fillText(fmt(v),pos.x,pos.y);
+          ctx.fillText(dsFmt(v),pos.x,pos.y);
         }else if(isLine){
           ctx.fillStyle="#16232f";ctx.textBaseline="bottom";
-          ctx.fillText(fmt(v),el.x,el.y-6);
+          ctx.fillText(dsFmt(v),el.x,el.y-6);
         }else if(stacked&&chart.data.datasets.length>1){
           const top=el.y,base=el.base,h=Math.abs(base-top);
           if(h<13){ctx.restore();return;}
           ctx.fillStyle="#fff";ctx.textBaseline="middle";
-          ctx.fillText(fmt(v),el.x,(top+base)/2);
+          ctx.fillText(dsFmt(v),el.x,(top+base)/2);
         }else if(horizontal){
           ctx.fillStyle="#16232f";ctx.textAlign="left";ctx.textBaseline="middle";
-          ctx.fillText(fmt(v),el.x+6,el.y);
+          ctx.fillText(dsFmt(v),el.x+6,el.y);
         }else{
           ctx.fillStyle="#16232f";ctx.textBaseline="bottom";
-          ctx.fillText(fmt(v),el.x,el.y-4);
+          ctx.fillText(dsFmt(v),el.x,el.y-4);
         }
         ctx.restore();
       });
