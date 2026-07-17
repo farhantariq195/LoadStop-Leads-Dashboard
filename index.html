@@ -1236,9 +1236,11 @@ function compareMetricDefs(){
   const idx=[...Array(n).keys()];
   const mqlByMonth=idx.map(i=>computeFunnelMQL(ytd.year+"-"+String(i+1).padStart(2,"0")));
   const spendByMonth=idx.map(i=>(ytd.google[i]||0)+(ytd.meta[i]||0));
+  const googleSpendByMonth=idx.map(i=>ytd.google[i]||0);
   const sqlByMonth=idx.map(i=>SQL_MONTHLY[i]||0);
   const closedByMonth=idx.map(i=>CLOSED_MONTHLY[i]||0);
   const totalDealByMonth=idx.map(i=>TOTAL_DEAL_MONTHLY[i]||0);
+  const mqlDealByMonth=idx.map(i=>MQL_DEAL_MONTHLY[i]||0);
   const defs=[
     {key:"mql",label:"MQL",format:"count",color:NAVY2,vals:mqlByMonth},
     {key:"sql",label:"SQL",format:"count",color:ORANGE,vals:sqlByMonth},
@@ -1247,10 +1249,10 @@ function compareMetricDefs(){
     {key:"qualified",label:"Qualified",format:"count",color:"#5b8fd0",vals:idx.map(i=>QUALIFIED_MONTHLY[i]||0)},
     {key:"closed",label:"Closed Deals",format:"count",color:"#1a7f45",vals:closedByMonth},
     {key:"totalDeal",label:"Total Deal Amount",format:"currency",color:"#123a63",vals:totalDealByMonth},
-    {key:"mqlDeal",label:"MQL Deal Amount",format:"currency",color:"#c96b1e",vals:idx.map(i=>MQL_DEAL_MONTHLY[i]||0)},
+    {key:"mqlDeal",label:"MQL Deal Amount",format:"currency",color:"#c96b1e",vals:mqlDealByMonth},
     {key:"spend",label:"Ad Spend",format:"currency",color:"#4267B2",vals:spendByMonth},
     {key:"cpl",label:"Cost Per Lead",format:"currency",color:"#e8b98a",vals:idx.map(i=>mqlByMonth[i]?Math.round(spendByMonth[i]/mqlByMonth[i]*100)/100:0)},
-    {key:"roi",label:"ROI %",format:"percent",color:"#3a6ea5",vals:idx.map(i=>spendByMonth[i]?Math.round((totalDealByMonth[i]-spendByMonth[i])/spendByMonth[i]*1000)/10:0)},
+    {key:"roi",label:"ROI % (MQL Deal Amount vs Google Spend)",format:"percent",color:"#3a6ea5",vals:idx.map(i=>googleSpendByMonth[i]?Math.round((mqlDealByMonth[i]-googleSpendByMonth[i])/googleSpendByMonth[i]*1000)/10:0)},
     {key:"convRate",label:"Sales Conversion % (Closed ÷ SQL)",format:"percent",color:"#d98841",vals:idx.map(i=>sqlByMonth[i]?Math.round(closedByMonth[i]/sqlByMonth[i]*1000)/10:0)}
   ];
   return {ytd,defs};
