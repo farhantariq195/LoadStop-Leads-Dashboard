@@ -306,6 +306,12 @@
     <div class="kpis" id="kpisTop"></div>
     <div class="kpis" id="kpis"></div>
 
+    <div class="panel">
+      <h3>FMCSA Truck Count by Month</h3>
+      <p class="cap">Total FMCSA-verified power units (trucks) across all leads, per month — true chronological order.</p>
+      <div class="chartbox tall"><canvas id="cTruckMonth"></canvas></div>
+    </div>
+
     <div class="sechead"><h2>Lead Source Performance</h2><div class="line"></div></div>
     <div class="grid3">
       <div class="panel"><h3>Source Volume</h3><p class="cap">Click a bar to filter to that source.</p><div class="chartbox"><canvas id="cSource"></canvas></div></div>
@@ -1565,6 +1571,11 @@ function render(){
   const leadsPerMonth=monthsChrono.map(m=>fmAll(m).length);
   if(charts.leadsMonth)charts.leadsMonth.destroy();
   charts.leadsMonth=new Chart(el("cLeadsMonth"),{type:"bar",data:{labels:monthsChrono,datasets:[{data:leadsPerMonth,backgroundColor:monthsChrono.map(m=>m===FILTERS.month?ORANGE:NAVY2),borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:22}},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.parsed.y.toLocaleString()} leads`}}},scales:{y:{beginAtZero:true,ticks:{precision:0},grid:{color:"#eef2f7"}},x:{grid:{display:false}}}}});
+
+  /* FMCSA Truck Count by Month — Overview section, always all months, same chronological order */
+  const truckCountPerMonth=monthsChronoAll.map(m=>fmAll(m).reduce((s,r)=>s+(cleanInt(get(r,"pu"))||0),0));
+  if(charts.truckMonth)charts.truckMonth.destroy();
+  charts.truckMonth=new Chart(el("cTruckMonth"),{type:"bar",data:{labels:monthsChronoAll,datasets:[{data:truckCountPerMonth,backgroundColor:monthsChronoAll.map(m=>m===FILTERS.month?ORANGE:NAVY2),borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:22}},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.parsed.y.toLocaleString()} trucks`}}},scales:{y:{beginAtZero:true,ticks:{precision:0},grid:{color:"#eef2f7"}},x:{grid:{display:false}}}}});
 
   /* Cost Per Lead by Month — same months/order as Leads Per Month, cost ÷ MQLs for each */
   el("cplMonthPanel").classList.toggle("hidden",!hasAds);
