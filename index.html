@@ -18,11 +18,11 @@
   .wrap{max-width:1280px;margin:0 auto;padding:0 22px 70px}
   header.top{background:linear-gradient(120deg,var(--navy) 0%,var(--navy2) 100%);color:#fff;padding:20px 0;margin-bottom:20px}
   header.top .wrap{padding-top:0;padding-bottom:0;display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}
-  .pagenav{background:rgba(0,0,0,.14);margin-top:20px}
-  .pagenav .wrap{display:flex;gap:4px;padding-top:0;padding-bottom:0}
-  .pagenav-btn{background:none;border:none;color:rgba(255,255,255,.7);font-family:inherit;font-size:13px;font-weight:600;padding:11px 16px;cursor:pointer;border-bottom:2px solid transparent}
-  .pagenav-btn:hover{color:#fff}
-  .pagenav-btn.active{color:#fff;border-bottom-color:var(--orange)}
+  .pagenav{background:rgba(0,0,0,.18);margin-top:18px}
+  .pagenav .wrap{display:flex;gap:10px;padding:10px 22px}
+  .pagenav-btn{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.85);font-family:inherit;font-size:13.5px;font-weight:700;padding:9px 20px;border-radius:9px;cursor:pointer;transition:.12s}
+  .pagenav-btn:hover{background:rgba(255,255,255,.18);color:#fff}
+  .pagenav-btn.active{background:var(--orange);border-color:var(--orange);color:#fff;box-shadow:0 2px 8px rgba(232,119,34,.4)}
   .brand{display:flex;align-items:center;gap:12px}
   .logo{height:42px;padding:5px 11px;border-radius:9px;background:#fff;display:flex;align-items:center;box-shadow:0 1px 3px rgba(0,0,0,.18)}
   .brandlogo{height:32px;width:auto;display:block}
@@ -57,7 +57,7 @@
   .freset{margin-left:auto;background:none;border:1px solid var(--line);border-radius:8px;padding:7px 12px;font-size:12.5px;cursor:pointer;color:var(--muted)}
   .freset:hover{color:var(--navy);border-color:var(--navy2)}
 
-  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:13px;margin-bottom:20px}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:13px;margin-bottom:20px;align-items:start}
   .kpi{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:15px 15px 13px;border-top:3px solid var(--navy2)}
   .kpi.o{border-top-color:var(--orange)} .kpi.b{border-top-color:var(--blue)}
   .kpi .lab{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
@@ -67,7 +67,8 @@
   .kpi.clickable:hover{transform:translateY(-2px);box-shadow:0 5px 18px rgba(13,43,78,.13)}
   .kpi.active{outline:2px solid var(--orange);outline-offset:-2px}
   .kpichart{display:flex;flex-direction:column}
-  .kpichart .chartboxmini{position:relative;flex:1;min-height:84px;margin-top:6px}
+  .kpichart .chartboxmini{position:relative;height:92px;margin-top:6px}
+  .kpichart .chartboxmini canvas{max-height:92px}
   .chip{display:inline-block;font-size:10.5px;font-weight:700;padding:1px 6px;border-radius:6px;margin-top:5px}
   .chip.up{background:#e3f5ea;color:#1a7f45} .chip.down{background:#fde8e8;color:#c0392b} .chip.flat{background:#eef1f5;color:#64748b}
   .chipabs{font-weight:600;opacity:.8}
@@ -150,6 +151,11 @@
   .live .dot{width:8px;height:8px;border-radius:50%;background:#3ddc84;display:inline-block;animation:pulse 2s infinite}
   @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(61,220,132,.6)}70%{box-shadow:0 0 0 6px rgba(61,220,132,0)}100%{box-shadow:0 0 0 0 rgba(61,220,132,0)}}
   #liveTxt{font-size:12px;white-space:nowrap}
+  .adsind{background:rgba(255,255,255,.14);border-radius:9px;padding:4px 10px;cursor:pointer;font-size:12px;white-space:nowrap;transition:.12s}
+  .adsind:hover{background:rgba(255,255,255,.24)}
+  .adsind .dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:2px}
+  .adsind .dot.off{background:rgba(255,255,255,.35)}
+  .adsind .dot.on{background:#3ddc84;animation:pulse 2s infinite}
   .livesel{font-size:11px;padding:3px 5px;border-radius:6px;background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.25)}
   .livesel option{color:#16232f}
   .livebtn{background:none;border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:6px;padding:2px 8px;cursor:pointer;font-size:14px;line-height:1}
@@ -162,19 +168,6 @@
   @keyframes spin{to{transform:rotate(360deg)}}
   .insightsUpdated{font-size:10.5px;color:var(--muted);white-space:nowrap}
 
-  #aiPanel{border-left:4px solid var(--orange);background:linear-gradient(135deg,#fff,#fbf5ee)}
-  .airow{display:flex;gap:9px}
-  #aiQuestion{flex:1;font-family:inherit;font-size:13.5px;border:1px solid var(--line);border-radius:9px;padding:10px 13px;color:var(--ink)}
-  #aiQuestion:focus{outline:none;border-color:var(--orange)}
-  #aiAskBtn{background:var(--navy2);color:#fff;border:none;border-radius:9px;padding:0 20px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit}
-  #aiAskBtn:hover{background:var(--navy)}
-  #aiAskBtn:disabled{opacity:.6;cursor:default}
-  #aiHistory{margin-top:14px;display:flex;flex-direction:column;gap:12px}
-  .aiqa{border-top:1px solid var(--line);padding-top:12px}
-  .aiq{font-size:12.5px;font-weight:700;color:var(--navy);margin-bottom:5px}
-  .aia{font-size:13px;color:var(--ink);line-height:1.55;white-space:pre-wrap}
-  .aia.err{color:#c0392b}
-  .aialoading{font-size:12.5px;color:var(--muted);font-style:italic}
   #adsPanel{border-left:4px solid var(--blue)}
   .adsrow{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
   .adsform{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
@@ -237,6 +230,7 @@
       <div class="cg"><span>Month</span><select id="monthSel"></select></div>
       <div class="cg"><span>Compare</span><select id="cmpSel"></select></div>
       <div class="cg live hidden" id="liveBadge"><span class="dot"></span><span id="liveTxt">Live</span><select id="liveInterval" class="livesel"><option value="0">Manual</option><option value="30">30s</option><option value="60" selected>1m</option><option value="300">5m</option></select><button id="gsRefresh" class="livebtn" title="Refresh now">&#8635;</button></div>
+      <div class="cg adsind" id="adsIndicator" title="Click to manage your Ads Sheet connection"><span class="dot off" id="adsDot"></span><span id="adsIndicatorTxt">Ads: not connected</span></div>
       <label class="btn ghost" style="margin:0"><input type="file" id="reupload" accept=".csv" hidden>Change file</label>
       <button class="btn" onclick="window.print()">Print / PDF</button>
     </div>
@@ -286,17 +280,8 @@
       <button class="freset" id="fReset">Reset filters</button>
     </div>
 
-    <div class="panel" id="aiPanel">
-      <h3 style="margin:0 0 3px">✨ Ask AI About This Dashboard</h3>
-      <p class="cap" style="margin:0 0 12px">Ask anything about your leads, campaigns, funnel, or ad performance — answered live from the current data.</p>
-      <div class="airow">
-        <input type="text" id="aiQuestion" placeholder="e.g. Which campaign has the best cost per booked meeting this month?" autocomplete="off">
-        <button class="btn" id="aiAskBtn">Ask</button>
-      </div>
-      <div id="aiHistory"></div>
-    </div>
 
-    <div class="panel" id="adsPanel">
+    <div class="panel hidden" id="adsPanel">
       <div class="adsrow">
         <div>
           <h3 style="margin:0 0 3px">Google Ads Live Feed</h3>
@@ -893,6 +878,13 @@ function ingestSql(objArray){
 }
 function startAdsAuto(){stopAdsAuto();LIVE_ADS.timer=setInterval(()=>pullAdsLive(true),ADS_REFRESH_MS);}
 function stopAdsAuto(){if(LIVE_ADS.timer){clearInterval(LIVE_ADS.timer);LIVE_ADS.timer=null;}}
+function updateAdsIndicator(){
+  const dot=el("adsDot"),txt=el("adsIndicatorTxt");
+  if(!dot||!txt)return;
+  dot.classList.toggle("on",hasAds);
+  dot.classList.toggle("off",!hasAds);
+  txt.textContent=hasAds?"Ads: connected":"Ads: not connected";
+}
 function disconnectAds(){
   stopAdsAuto();LIVE_ADS.info=null;clearAdsConnection();
   hasAds=false;ADS_RAW=[];ADS_HEAD={};
@@ -908,6 +900,7 @@ function disconnectAds(){
   el("mqlSqlMatrixPanel").classList.add("hidden");
   el("adsStatusTxt").textContent="Not connected — export campaign performance into a Sheet with a Google Ads Script, then link it here.";
   el("adsUrl").value="";el("adsToken").value="";el("adsErr").textContent="";
+  updateAdsIndicator();
   renderCustomCompare(); // independent of render()/renderAds() below, since those skip entirely when hasAds is false — this call is what actually shows the "connect your Ads Sheet" message on the standalone page
   if(RAW.length)render();
 }
@@ -927,6 +920,7 @@ function ingestAds(objArray,onErr){
   el("adsSection").classList.remove("hidden");
   el("roiSectionHead").classList.remove("hidden");
   el("roiSection").classList.remove("hidden");
+  updateAdsIndicator();
   /* Leads and Ads load asynchronously and can resolve in either order. If leads are already in,
      do a full render() (it includes renderAds()) so the top KPI row — Amount Spent, Cost/Lead —
      picks up hasAds=true instead of staying stuck on whatever it rendered before Ads arrived. */
@@ -1550,7 +1544,7 @@ function render(){
     +`<div class="kpi kpichart"><div class="lab">Meetings Booked</div><div class="chartboxmini"><canvas id="cBookedMini"></canvas></div></div>`;
   if(hasBooked){
     const rawCountMini=countBy(rows,r=>get(r,"booked")||"(blank)");
-    charts.bookedMini=new Chart(el("cBookedMini"),{type:"pie",data:{labels:Object.keys(rawCountMini),datasets:[{data:Object.values(rawCountMini),backgroundColor:[ORANGE,"#cbd5e1",NAVY2,BLUE,...PAL],borderWidth:2,borderColor:"#fff"}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"bottom",labels:{boxWidth:8,padding:4,font:{size:9}}},tooltip:{callbacks:{label:c=>` ${c.label}: ${c.parsed}`}}}}});
+    charts.bookedMini=new Chart(el("cBookedMini"),{type:"pie",data:{labels:Object.keys(rawCountMini),datasets:[{data:Object.values(rawCountMini),backgroundColor:[ORANGE,"#cbd5e1",NAVY2,BLUE,...PAL],borderWidth:2,borderColor:"#fff"}]},options:{responsive:true,maintainAspectRatio:false,layout:{padding:4},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.label}: ${c.parsed}`}}}}});
   }
 
   /* Raw lead records — mirrors the Gravity Forms sheet */
@@ -2118,107 +2112,6 @@ function refreshInsights(){
 }
 el("insightsRefreshBtn").addEventListener("click",refreshInsights);
 
-/* ---------- Ask AI ---------- */
-function buildAiContext(){
-  const rows=currentRows();
-  const M=computeMetrics(rows);
-  const lines=[];
-  lines.push(`=== SUMMARY (active filters: ${el("subhead").textContent||"All"}) ===`);
-  lines.push(`Total Leads: ${M.total}`);
-  lines.push(`Carrier: ${M.carrier}, Broker: ${M.broker}, Hybrid: ${M.hybrid}, Other: ${M.other}`);
-  if(hasBooked)lines.push(`Meetings Booked: ${M.booked} (${M.bookRate}% book rate)`);
-  lines.push(`Enterprise leads (80+ trucks): ${M.enterprise} (${M.entRate}%), ICP+ (25+ trucks): ${M.icpPlus} (${M.icpRate}%)`);
-  lines.push(`FMCSA Verified: ${M.fmcsa}, Avg Fleet Size: ${M.avgPU}, Median Fleet Size: ${M.medPU}`);
-
-  if(hasAds){
-    const spendForFilter=adsSpendForMonth(FILTERS.month);
-    lines.push(`\n=== AD SPEND (current month filter: ${FILTERS.month}) ===`);
-    lines.push(`Total Spend (Google+Meta): $${spendForFilter!=null?spendForFilter.toFixed(2):"n/a"}`);
-    lines.push(`Cost per Lead: $${(spendForFilter&&M.total)?(spendForFilter/M.total).toFixed(2):"n/a"}`);
-  }
-
-  const bySource=aggArray(rows,r=>get(r,"source")||"Unknown");
-  if(bySource.length){
-    lines.push(`\n=== BY SOURCE ===`);
-    bySource.forEach(s=>lines.push(`${s.name}: ${s.n} leads (${s.share}% of total), booked ${s.booked} (${s.bookRate}%), enterprise ${s.ent}`));
-  }
-
-  if(hasAds&&ADS_RAW.length){
-    const campAgg=adsAggByCampaign(ADS_RAW,leadConversionsByCampaign(null));
-    lines.push(`\n=== BY CAMPAIGN (all-time ad performance) ===`);
-    campAgg.forEach(c=>lines.push(`${c.name}: $${c.cost.toFixed(2)} spend, ${c.impressions} impressions, ${c.clicks} clicks, ${c.ctr}% CTR, $${c.avgCpc.toFixed(2)} avg CPC, ${c.conversions} matched leads`));
-  }
-
-  if(hasAds){
-    const ytd=monthlySpendYTD();
-    lines.push(`\n=== MONTHLY MQL -> SQL -> DEMO (Jan through current month) ===`);
-    ytd.labels.forEach((lab,i)=>{
-      const key=ytd.year+"-"+String(i+1).padStart(2,"0");
-      const mql=computeFunnelMQL(key),sql=SQL_MONTHLY[i]||0,demo=DEMOS_MONTHLY[i]||0;
-      const spend=ytd.google[i]+ytd.meta[i];
-      lines.push(`${lab}: spend $${spend.toFixed(2)}, MQL ${mql}, SQL ${sql}, Demo Scheduled ${demo}`);
-    });
-  }
-
-  const insightEls=[...document.querySelectorAll("#insightGrid .icard")];
-  if(insightEls.length){
-    lines.push(`\n=== KEY FINDINGS (already computed by the dashboard) ===`);
-    insightEls.forEach(c=>{
-      const lab=c.querySelector(".icard-lab")?.textContent||"";
-      const val=c.querySelector(".icard-val")?.textContent||"";
-      const sub=c.querySelector(".icard-sub")?.textContent||"";
-      lines.push(`${lab}: ${val} — ${sub}`);
-    });
-  }
-
-  const st=aggArray(rows,r=>get(r,"state")||"Unknown").sort((a,b)=>b.n-a.n);
-  if(st.length){
-    lines.push(`\n=== BY STATE ===`);
-    st.forEach(s=>lines.push(`${s.name}: ${s.n} leads (${s.share}%), booked ${s.booked} (${s.bookRate}%)`));
-  }
-
-  const byType=aggArray(rows,r=>typeOf(r)||"other");
-  if(byType.length){
-    lines.push(`\n=== BY COMPANY TYPE ===`);
-    byType.forEach(t=>lines.push(`${t.name}: ${t.n} leads (${t.share}%), booked ${t.booked} (${t.bookRate}%), avg fleet size ${t.avgPU}`));
-  }
-
-  /* Deliberately aggregate-only below this point — no loop over individual lead records, so no
-     single customer's data (name, company, contact info) ever leaves the browser to the AI API. */
-  return lines.join("\n");
-}
-let aiHistory=[];
-function renderAiHistory(){
-  el("aiHistory").innerHTML=aiHistory.map(h=>`<div class="aiqa"><div class="aiq">You asked: ${esc(h.q)}</div>${h.loading?`<div class="aialoading">Thinking…</div>`:`<div class="aia${h.err?" err":""}">${esc(h.a)}</div>`}</div>`).join("");
-}
-async function askAI(){
-  const input=el("aiQuestion"),q=input.value.trim();
-  if(!q)return;
-  const btn=el("aiAskBtn");
-  btn.disabled=true;
-  const entry={q,a:"",loading:true};
-  aiHistory.unshift(entry);
-  renderAiHistory();
-  input.value="";
-  try{
-    const resp=await fetch("/api/ask-ai",{
-      method:"POST",
-      headers:{"content-type":"application/json"},
-      body:JSON.stringify({question:q,context:buildAiContext()})
-    });
-    let data;
-    try{data=await resp.json();}catch(e){data={error:"Unexpected response from the AI service."};}
-    if(!resp.ok||data.error){entry.a="Error: "+(data.error||"Something went wrong.");entry.err=true;}
-    else{entry.a=data.answer||"No answer returned.";}
-  }catch(e){
-    entry.a="Error: "+e.message;entry.err=true;
-  }
-  entry.loading=false;
-  btn.disabled=false;
-  renderAiHistory();
-}
-el("aiAskBtn").addEventListener("click",askAI);
-el("aiQuestion").addEventListener("keydown",e=>{if(e.key==="Enter")askAI();});
 el("liveInterval").addEventListener("change",e=>{LIVE.interval=+e.target.value;showLive();if(LIVE.url)startAuto();});
 el("adsConnect").addEventListener("click",connectAdsSheet);
 el("adsDisconnect").addEventListener("click",disconnectAds);
@@ -2246,6 +2139,7 @@ document.querySelectorAll(".pagenav-btn").forEach(btn=>{
     window.scrollTo(0,0);
   });
 });
+el("adsIndicator").addEventListener("click",()=>el("adsPanel").classList.toggle("hidden"));
 
 /* reconnect to a previously connected Google Sheet after a page refresh — falling back to the
    baked-in default links below so a fresh visitor (no saved connection yet) sees live data too */
