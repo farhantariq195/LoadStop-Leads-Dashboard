@@ -13,11 +13,6 @@ export default function middleware(request) {
       status: 401,
       headers: {
         "WWW-Authenticate": 'Basic realm="LoadStop Dashboard", charset="UTF-8"',
-        "x-debug-user-len": String(user.length),
-        "x-debug-pass-len": String(pass.length),
-        "x-debug-expected-len": String(expected.length),
-        "x-debug-auth-received": auth ? "yes" : "no",
-        "x-debug-auth-received-len": auth ? String(auth.length) : "0",
       },
     });
   }
