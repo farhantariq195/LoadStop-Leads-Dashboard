@@ -76,6 +76,37 @@
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
   .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
   @media(max-width:880px){.grid2,.grid3{grid-template-columns:1fr}}
+
+  /* Monthly Marketing Report — each .rpt-slide mirrors one PDF slide: a navy header band
+     (optionally with an orange accent block carrying the slide's one big number, same as the
+     PDF's top-right corner), a row of colored stat tiles, then tables/charts/manual inputs. */
+  .rpt-slide{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:22px;overflow:hidden}
+  .rpt-head{background:var(--navy);color:#fff;padding:18px 22px;display:flex;justify-content:space-between;align-items:stretch;gap:16px;flex-wrap:wrap}
+  .rpt-head .htext{padding:2px 0}
+  .rpt-head h3{margin:0;font-size:17px}
+  .rpt-head .sub{font-size:12.5px;opacity:.75;margin-top:3px}
+  .rpt-head .accent{background:var(--orange);display:flex;flex-direction:column;justify-content:center;align-items:center;padding:8px 30px;margin:-18px -22px -18px 0;text-align:center}
+  .rpt-head .accent .big{font-size:26px;font-weight:800;line-height:1}
+  .rpt-head .accent .lab{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-top:2px}
+  .rpt-body{padding:20px 22px}
+  .rpt-tiles{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+  .rpt-tile{flex:1;min-width:150px;border-radius:10px;padding:16px 14px;color:#fff;text-align:center}
+  .rpt-tile .big{font-size:23px;font-weight:800;line-height:1.15}
+  .rpt-tile .lab{font-size:11px;font-weight:700;margin-top:4px;opacity:.94}
+  .rpt-tile .sub{font-size:10.5px;opacity:.8;margin-top:2px}
+  .rpt-tile.navy{background:var(--navy)} .rpt-tile.navy2{background:var(--navy2)} .rpt-tile.orange{background:var(--orange)} .rpt-tile.blue{background:var(--blue)} .rpt-tile.green{background:#1a7f45}
+  .rpt-sub{font-size:13px;font-weight:700;color:var(--navy);margin:0 0 8px}
+  .rpt-input{width:100%;border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-family:inherit;font-size:12.5px;color:var(--ink)}
+  textarea.rpt-input{resize:vertical;min-height:56px}
+  .rpt-manual-badge{display:inline-block;font-size:10px;font-weight:700;color:var(--orange);border:1px solid var(--orange);border-radius:999px;padding:1px 8px;margin-left:8px;vertical-align:middle}
+  .rpt-row-add{background:none;border:1px dashed var(--line);border-radius:6px;padding:6px 12px;font-size:12px;font-weight:600;color:var(--navy2);cursor:pointer;margin-top:8px}
+  .rpt-row-add:hover{background:#f4f7fb}
+  .rpt-row-del{background:none;border:none;color:#c0392b;cursor:pointer;font-size:15px;line-height:1;padding:2px 6px}
+  .rpt-monthbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+  .rpt-monthbar select{padding:8px 12px;border-radius:9px;border:1px solid var(--line);font-family:inherit;font-size:13px;background:#fff}
+  .rpt-slides-btn{background:linear-gradient(120deg,#4285F4,#34A853);color:#fff;border:none;border-radius:9px;padding:10px 18px;font-family:inherit;font-size:13.5px;font-weight:700;cursor:pointer}
+  .rpt-slides-btn:hover{opacity:.92}
+  .rpt-slides-btn:disabled{opacity:.5;cursor:not-allowed}
   .panel{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px;margin-bottom:18px}
   .panel h3{margin:0 0 4px;font-size:15.5px;color:var(--navy);font-weight:700}
   .panel .cap{font-size:12.5px;color:var(--muted);margin:0 0 14px}
@@ -239,6 +270,7 @@
     <div class="wrap">
       <button class="pagenav-btn active" data-page="dashPage">Dashboard</button>
       <button class="pagenav-btn" data-page="comparePageWrap">Performance Comparison</button>
+      <button class="pagenav-btn" data-page="reportPageWrap">Monthly Marketing Report</button>
     </div>
   </div>
 </header>
@@ -272,7 +304,7 @@
       </div>
       <div class="fgroup"><label>Source</label><select class="fsel" id="fSource"><option value="all">All sources</option></select></div>
       <div class="fgroup"><label>Fleet Tier</label>
-        <select class="fsel" id="fTier"><option value="all">All tiers</option><option value="ent">Enterprise 80+</option><option value="icp">ICP 25–79</option><option value="sub">Sub-ICP &lt;25</option><option value="none">No FMCSA</option></select>
+        <select class="fsel" id="fTier"><option value="all">All tiers</option><option value="ent">Enterprise 80+/751+</option><option value="icp">Mid-Tier 20–79/251–750</option><option value="sub">Sub-ICP &lt;20/100–250</option><option value="none">No FMCSA</option></select>
       </div>
       <div class="fgroup"><label>Meeting</label>
         <select class="fsel" id="fBooked"><option value="all">All</option><option value="booked">Booked only</option><option value="not">Not booked</option></select>
@@ -461,7 +493,7 @@
     </div>
 
     <div class="sechead"><h2>Enterprise Leads</h2><div class="line"></div></div>
-    <div class="panel"><h3>Enterprise Qualified</h3><p class="cap">Carrier/Hybrid 80+ FMCSA trucks, or Broker 300+ loads/month. Sortable.</p><div class="scroll"><table id="tEnt"></table></div></div>
+    <div class="panel"><h3>Enterprise Qualified</h3><p class="cap">Carrier/Hybrid 80+ FMCSA trucks, or Broker 751+ loads/month (Hybrid qualifies via either). Sortable.</p><div class="scroll"><table id="tEnt"></table></div></div>
 
     <div class="foot">Generated in-browser · LoadStop Lead Intelligence · FMCSA Power Units = authoritative fleet signal · All entries treated as MQLs</div>
   </div>
@@ -489,6 +521,16 @@
     <div class="scroll"><div id="compareSummaryTable"></div></div>
   </div>
   <div class="panel hidden" id="compareNoAdsMsg"><p class="cap" style="margin:0">Connect your Ads Sheet from the <b>Dashboard</b> tab to unlock this page.</p></div>
+</div>
+
+<div class="wrap hidden" id="reportPageWrap">
+  <div class="rpt-monthbar">
+    <div class="widgetlab" style="margin:0">Month</div>
+    <select id="reportMonth"></select>
+    <button class="rpt-slides-btn" id="reportSlidesBtn" title="Requires one-time Google setup">Open in Google Slides</button>
+    <span class="cap" id="reportSlidesNote" style="margin:0"></span>
+  </div>
+  <div id="reportSlidesWrap"></div>
 </div>
 
 <script>
@@ -544,9 +586,24 @@ const isCarrier=r=>{const t=get(r,"type");return /carrier/i.test(t)&&!/hybrid/i.
 const isHybrid=r=>/hybrid/i.test(get(r,"type"));
 const isPaidSrc=r=>/google|meta|facebook|instagram|linkedin|bing|cpc|ppc|paid|ads/i.test(get(r,"source"));
 function typeOf(r){const t=get(r,"type");if(isBroker(t))return"broker";if(/hybrid/i.test(t))return"hybrid";if(/carrier/i.test(t))return"carrier";return"other";}
-function tierOf(r){const pu=cleanInt(get(r,"pu"));if(pu===null)return"none";if(pu>=80)return"ent";if(pu>=25)return"icp";return"sub";}
+/* Tier is truck-based (FMCSA Power Units) for Carrier, loads/month-based for Broker (no FMCSA
+   equivalent for load volume), and whichever is more favorable for Hybrid — self-reported Vehicle
+   Count never qualifies a lead into a higher tier. A broker below 100 loads/month (or with no
+   loads/month data) gets no tier, same treatment as a carrier with no FMCSA record. */
+function truckTierOf(pu){if(pu===null)return null;if(pu>=80)return"ent";if(pu>=20)return"icp";return"sub";}
+function loadTierOf(lpm){if(lpm===null)return null;if(lpm>=751)return"ent";if(lpm>=251)return"icp";if(lpm>=100)return"sub";return null;}
+function tierOf(r){
+  const type=get(r,"type"),pu=cleanInt(get(r,"pu")),lpmRaw=get(r,"lpm"),lpm=lpmRaw?parseLPM(lpmRaw):null;
+  const truckTier=truckTierOf(pu),loadTier=loadTierOf(lpm);
+  const rank={ent:3,icp:2,sub:1};
+  let best;
+  if(isBroker(type))best=loadTier;
+  else if(isHybrid(r))best=(truckTier&&loadTier)?(rank[truckTier]>=rank[loadTier]?truckTier:loadTier):(truckTier||loadTier);
+  else best=truckTier;
+  return best||"none";
+}
 function isBooked(r){if(!hasBooked)return false;const v=get(r,"booked").toLowerCase();return /^(y|yes|booked|true|1|scheduled|complete|done|confirm|✓|✔)/.test(v);}
-function entFlag(r){const t=get(r,"type"),pu=cleanInt(get(r,"pu")),lpm=parseLPM(get(r,"lpm"));return isBroker(t)?lpm>=300:(pu!==null&&pu>=80);}
+function entFlag(r){return tierOf(r)==="ent";}
 function monthSort(a,b){const pa=MONTHS.findIndex(m=>a.toLowerCase().includes(m)),pb=MONTHS.findIndex(m=>b.toLowerCase().includes(m));if(pa!==pb)return pa-pb;return a.localeCompare(b);}
 /* Builds a year-aware chronological key per Month-text bucket from Entry Date, so
    "November"/"December" from one year sort before "January"+ from the next — a plain
@@ -581,7 +638,7 @@ function aggArray(rows,keyFn){return Object.entries(agg(rows,keyFn)).map(([name,
 /* metrics for a row set */
 function computeMetrics(rows){
   const n=rows.length; let puAll=0,nF=0,pus=[],tier={ent:0,icp:0,sub:0,none:0};
-  rows.forEach(r=>{const pu=cleanInt(get(r,"pu"));if(pu===null){tier.none++;return;}nF++;puAll+=pu;pus.push(pu);if(pu>=80)tier.ent++;else if(pu>=25)tier.icp++;else tier.sub++;});
+  rows.forEach(r=>{const pu=cleanInt(get(r,"pu"));if(pu!==null){nF++;puAll+=pu;pus.push(pu);}tier[tierOf(r)]++;});
   const carrier=rows.filter(isCarrier).length,broker=rows.filter(r=>isBroker(get(r,"type"))).length,hybrid=rows.filter(isHybrid).length;
   const enterprise=rows.filter(entFlag).length,booked=rows.filter(isBooked).length,icpPlus=tier.ent+tier.icp;
   return {total:n,carrier,broker,hybrid,other:n-carrier-broker-hybrid,booked,enterprise,icpPlus,fmcsa:nF,puAll,avgPU:avg(pus),medPU:median(pus),
@@ -1549,7 +1606,7 @@ function render(){
   const fbits=[el("monthSel").selectedOptions[0].text];
   if(FILTERS.type!=="all")fbits.push(cap(FILTERS.type));
   if(FILTERS.source!=="all")fbits.push(FILTERS.source);
-  if(FILTERS.tier!=="all")fbits.push({ent:"Enterprise",icp:"ICP",sub:"Sub-ICP",none:"No FMCSA"}[FILTERS.tier]);
+  if(FILTERS.tier!=="all")fbits.push({ent:"Enterprise",icp:"Mid-Tier",sub:"Sub-ICP",none:"No FMCSA"}[FILTERS.tier]);
   if(FILTERS.booked!=="all")fbits.push(FILTERS.booked==="booked"?"Booked":"Not booked");
   el("subhead").textContent=fbits.join(" · ");
 
@@ -1669,8 +1726,8 @@ function render(){
   }
 
   /* Funnel */
-  const brokerEnt=rows.filter(r=>isBroker(get(r,"type"))&&parseLPM(get(r,"lpm"))>=750).length;
-  const stages=[{l:"Total Leads",v:M.total,c:NAVY},{l:"FMCSA Verified",v:M.fmcsa,c:NAVY2},{l:"ICP+ (25+ trucks)",v:M.icpPlus,c:BLUE},{l:"Enterprise (80+)",v:M.tier.ent,c:ORANGE},{l:"Broker Enterprise (750+ loads)",v:brokerEnt,c:"#7c3aed",parent:0}];
+  const brokerEnt=rows.filter(r=>isBroker(get(r,"type"))&&parseLPM(get(r,"lpm"))>=751).length;
+  const stages=[{l:"Total Leads",v:M.total,c:NAVY},{l:"FMCSA Verified",v:M.fmcsa,c:NAVY2},{l:"ICP+ (Mid-Tier or better)",v:M.icpPlus,c:BLUE},{l:"Enterprise",v:M.tier.ent,c:ORANGE},{l:"Broker Enterprise (751+ loads)",v:brokerEnt,c:"#7c3aed",parent:0}];
   const fmax=M.total||1;
   el("funnel").innerHTML=stages.map((s,i)=>{
     const w=Math.max(4,s.v/fmax*100),ofT=pct(s.v,M.total),parentIdx=s.parent!=null?s.parent:i-1;
@@ -1684,8 +1741,8 @@ function render(){
     const rawCount=countBy(rows,r=>get(r,"booked")||"(blank)");
     charts.bookRaw=new Chart(el("cBookRaw"),{type:"doughnut",data:{labels:Object.keys(rawCount),datasets:[{data:Object.values(rawCount),backgroundColor:[ORANGE,"#cbd5e1",NAVY2,BLUE,...PAL],borderWidth:2,borderColor:"#fff"}]},options:donutOpts()});
     rateChart("cBookType",agg(rows,r=>get(r,"type")||"Unspecified"),NAVY2);
-    const tr={"Enterprise (80+)":{n:0,booked:0},"ICP (25–79)":{n:0,booked:0},"Sub-ICP (<25)":{n:0,booked:0},"No FMCSA":{n:0,booked:0}};
-    rows.forEach(r=>{const to=tierOf(r),key={ent:"Enterprise (80+)",icp:"ICP (25–79)",sub:"Sub-ICP (<25)",none:"No FMCSA"}[to];tr[key].n++;if(isBooked(r))tr[key].booked++;});
+    const tr={"Enterprise":{n:0,booked:0},"Mid-Tier":{n:0,booked:0},"Sub-ICP":{n:0,booked:0},"No FMCSA":{n:0,booked:0}};
+    rows.forEach(r=>{const to=tierOf(r),key={ent:"Enterprise",icp:"Mid-Tier",sub:"Sub-ICP",none:"No FMCSA"}[to];tr[key].n++;if(isBooked(r))tr[key].booked++;});
     rateChart("cBookTier",tr,ORANGE);
     const bySrc=agg(rows,r=>get(r,"source")||"Unknown");
     const sr=Object.entries(bySrc).map(([k,o])=>[k,pct(o.booked,o.n),o.booked,o.n]).sort((a,b)=>b[1]-a[1]);
@@ -1718,7 +1775,14 @@ function render(){
 
   /* Enterprise table */
   const entRows=rows.filter(entFlag);
-  const entData=entRows.map(r=>{const t=get(r,"type"),pu=cleanInt(get(r,"pu")),lpm=parseLPM(get(r,"lpm"));return {company:get(r,"company")||"—",type:t||"—",source:get(r,"source")||"—",campaign:get(r,"campaign")||"—",adgroup:get(r,"adgroup")||"—",qual:isBroker(t)?lpm:(pu||0),qualTxt:isBroker(t)?`${lpm.toLocaleString()}+ loads/mo`:`${pu?pu.toLocaleString():"—"} trucks`,booked:isBooked(r),state:get(r,"state")||"—"};});
+  const entData=entRows.map(r=>{
+    const t=get(r,"type"),pu=cleanInt(get(r,"pu")),lpmRaw=get(r,"lpm"),lpm=lpmRaw?parseLPM(lpmRaw):null;
+    /* Hybrid can qualify via either metric — show whichever one actually earned it Enterprise,
+       preferring trucks when both do (matches this table's pre-existing default for non-brokers). */
+    const truckQual=truckTierOf(pu)==="ent",loadQual=loadTierOf(lpm)==="ent";
+    const showLoads=isBroker(t)||(isHybrid(r)&&loadQual&&!truckQual);
+    return {company:get(r,"company")||"—",type:t||"—",source:get(r,"source")||"—",campaign:get(r,"campaign")||"—",adgroup:get(r,"adgroup")||"—",qual:showLoads?(lpm||0):(pu||0),qualTxt:showLoads?`${(lpm||0).toLocaleString()}+ loads/mo`:`${pu?pu.toLocaleString():"—"} trucks`,booked:isBooked(r),state:get(r,"state")||"—"};
+  });
   const entCols=[{label:"Company",get:r=>r.company,fmt:v=>esc(v)},{label:"Type",get:r=>r.type,fmt:v=>esc(v)},{label:"Source",get:r=>r.source,fmt:v=>esc(v)},{label:"Campaign",get:r=>r.campaign,fmt:v=>esc(v)},{label:"Ad Group",get:r=>r.adgroup,fmt:v=>esc(v)},{label:"Qualifier",num:1,get:r=>r.qual,fmt:(v,r)=>`<strong>${r.qualTxt}</strong>`}];
   if(hasBooked)entCols.push({label:"Booked",get:r=>r.booked?1:0,fmt:(v)=>v?'<span class="tag ent">YES</span>':"—"});
   entCols.push({label:"State",get:r=>r.state,fmt:v=>esc(v)});
@@ -1739,7 +1803,7 @@ function buildMoM(M,C,rows,cmpRows){
   const keys=[["Total","total"],["Carrier","carrier"],["Broker","broker"],["Hybrid","hybrid"],["Booked","booked"],["Enterprise","enterprise"],["ICP+","icpPlus"],["FMCSA","fmcsa"]];
   charts.mom=new Chart(el("cMoM"),{type:"bar",data:{labels:keys.map(k=>k[0]),datasets:[{label:"Prior",data:keys.map(k=>C[k[1]]),backgroundColor:NAVY2,borderRadius:4},{label:"Current",data:keys.map(k=>M[k[1]]),backgroundColor:ORANGE,borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:20}},plugins:{legend:{position:"bottom",labels:{boxWidth:11}}},scales:{y:{beginAtZero:true,grid:{color:"#eef2f7"}},x:{grid:{display:false}}}}});
 
-  const rowsDef=[["Total Leads","total"],["Carrier","carrier"],["Broker","broker"],["Hybrid","hybrid"],["Meetings Booked","booked"],["Book Rate","bookRate","pp"],["Enterprise","enterprise"],["Enterprise Rate","entRate","pp"],["ICP+ (25+)","icpPlus"],["FMCSA Verified","fmcsa"],["Avg Fleet PU","avgPU"],["Median Fleet PU","medPU"]];
+  const rowsDef=[["Total Leads","total"],["Carrier","carrier"],["Broker","broker"],["Hybrid","hybrid"],["Meetings Booked","booked"],["Book Rate","bookRate","pp"],["Enterprise","enterprise"],["Enterprise Rate","entRate","pp"],["ICP+","icpPlus"],["FMCSA Verified","fmcsa"],["Avg Fleet PU","avgPU"],["Median Fleet PU","medPU"]];
   el("tMoM").innerHTML=`<thead><tr><th>Metric</th><th class="num">Prior</th><th class="num">Current</th><th class="num">Δ</th><th class="num">Δ%</th></tr></thead><tbody>`+
     rowsDef.map(([lab,k,pp])=>{
       const cv=C[k],mv=M[k],d=mv-cv;
@@ -1885,7 +1949,7 @@ function buildInsights(rows,M,C,cmpRows){
   }
 
   /* 4. Fleet-tier paradox — checks whether the "best" ICP tier actually converts best */
-  const tierLabels={ent:"Enterprise (80+)",icp:"ICP (25–79)",sub:"Sub-ICP (<25)"};
+  const tierLabels={ent:"Enterprise",icp:"Mid-Tier",sub:"Sub-ICP"};
   const tierStats={};
   rows.forEach(r=>{
     const t=tierOf(r);
@@ -1901,9 +1965,9 @@ function buildInsights(rows,M,C,cmpRows){
     if(best.k!=="ent"){
       const entStat=withRate.find(x=>x.k==="ent");
       cards.push(icard("o","target",`${best.rate}%`,"Fleet-Tier Paradox",
-        `${tierLabels[best.k]} books best at ${best.rate}%${entStat?` — beating Enterprise 80+ (${entStat.rate}%)`:""}. Targeting may be over-indexed on the biggest fleets.`));
+        `${tierLabels[best.k]} books best at ${best.rate}%${entStat?` — beating Enterprise (${entStat.rate}%)`:""}. Targeting may be over-indexed on the biggest fleets.`));
     }else{
-      cards.push(icard("g","target",`${best.rate}%`,"Enterprise Tier Confirmed",`Enterprise (80+) leads book best at ${best.rate}% — your targeting is well-aligned with actual conversion.`));
+      cards.push(icard("g","target",`${best.rate}%`,"Enterprise Tier Confirmed",`Enterprise leads book best at ${best.rate}% — your targeting is well-aligned with actual conversion.`));
     }
   }else{
     const topTier=Object.entries(M.tier).filter(([k])=>k!=="none").sort((a,b)=>b[1]-a[1])[0];
@@ -2172,11 +2236,12 @@ function ymd(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"
   if(endI)endI.addEventListener("change",()=>renderAds());
 });
 el("adsCampaignStatus").addEventListener("change",()=>renderAds());
+const PAGE_IDS=["dashPage","comparePageWrap","reportPageWrap"];
 document.querySelectorAll(".pagenav-btn").forEach(btn=>{
   btn.addEventListener("click",()=>{
     document.querySelectorAll(".pagenav-btn").forEach(b=>b.classList.toggle("active",b===btn));
-    el("dashPage").classList.toggle("hidden",btn.dataset.page!=="dashPage");
-    el("comparePageWrap").classList.toggle("hidden",btn.dataset.page!=="comparePageWrap");
+    PAGE_IDS.forEach(id=>{const e=el(id);if(e)e.classList.toggle("hidden",btn.dataset.page!==id);});
+    if(btn.dataset.page==="reportPageWrap")renderReport();
     window.scrollTo(0,0);
   });
 });
@@ -2326,6 +2391,675 @@ function initDragDrop(){
 }
 initDragDrop();
 initFunnelSection();
+
+/* ============================================================
+   Monthly Marketing Report — 3rd tab. Mirrors the team's existing
+   manual slide deck: auto-filled from data already on the Dashboard
+   tab wherever possible; slide 1's dept comments, slide 3's closed-
+   deal attribution, and slide 7's email-platform stats stay manual
+   (that data doesn't exist in the Gravity Sheet), persisted per
+   month via localStorage — same pattern as the Sales Funnel section.
+   ============================================================ */
+const REPORT_MANUAL_KEY="loadstopReportManual";
+function loadReportManual(){try{return JSON.parse(localStorage.getItem(REPORT_MANUAL_KEY)||"{}");}catch(e){return{};}}
+function saveReportManual(data){try{localStorage.setItem(REPORT_MANUAL_KEY,JSON.stringify(data));}catch(e){}}
+function reportManualFor(key){const d=loadReportManual();return d[key]||{};}
+function patchReportManual(key,patch){const d=loadReportManual();d[key]=Object.assign({},d[key]||{},patch);saveReportManual(d);}
+function reportEmailManual(key){return reportManualFor(key).email||{};}
+
+/* "Month" in the sheet is text ("July"), but funnel/spend data is keyed "YYYY-MM" — MONTH_ORDER
+   (built from each month-bucket's average Entry Date) already resolves the year, so reuse it. */
+function monthTextToKey(mo){const ord=MONTH_ORDER[mo];if(ord==null)return mo;const y=Math.floor(ord/12),m=((ord%12)+12)%12;return y+"-"+String(m+1).padStart(2,"0");}
+function reportMonths(){return allMonthsChrono();}
+function shortDate(raw){const t=parseEntryDate(raw);if(isNaN(t))return raw||"—";return new Date(t).toLocaleDateString("default",{month:"short",day:"numeric"});}
+
+const REPORT_DEPTS=["Content","UI/UX","Ops / Dev","SEO","Performance Marketing","Email Marketing","Video","Graphic Design"];
+
+/* ---- Slide 1: Marketing Team Initiatives — structure fixed, comments manual ---- */
+function reportSlide1Html(monthText,key){
+  const comments=reportManualFor(key).deptComments||{};
+  const rows=REPORT_DEPTS.map(d=>`<tr><td style="font-weight:700;color:var(--navy);white-space:nowrap;vertical-align:top;padding-top:12px">${esc(d)}</td><td><textarea class="rpt-input" data-dept="${esc(d)}" placeholder="What did this team do this month?">${esc(comments[d]||"")}</textarea></td></tr>`).join("");
+  return `<div class="rpt-slide" id="rptSlide1">
+    <div class="rpt-head"><div class="htext"><h3>LoadStop | Marketing Team Initiatives</h3><div class="sub">${esc(monthText)}<span class="rpt-manual-badge">manual</span></div></div></div>
+    <div class="rpt-body"><table><tbody>${rows}</tbody></table></div>
+  </div>`;
+}
+function wireSlide1(key){
+  document.querySelectorAll('#rptSlide1 textarea[data-dept]').forEach(ta=>{
+    ta.addEventListener("input",()=>{
+      const comments=Object.assign({},reportManualFor(key).deptComments||{});
+      comments[ta.dataset.dept]=ta.value;
+      patchReportManual(key,{deptComments:comments});
+    });
+  });
+}
+
+/* ---- Slide 2: Overview at a Glance — fully automated ---- */
+function reportSlide2Data(monthText){
+  const rows=RAW.filter(r=>get(r,"month")===monthText);
+  const key=monthTextToKey(monthText);
+  const mql=rows.length;
+  const ytd=monthlySpendYTD();
+  let mIdx=null;
+  const parts=String(key).split("-");
+  if(parts.length===2){const y=+parts[0],m=+parts[1];if(y===ytd.year)mIdx=m-1;}
+  const spendGoogle=mIdx!=null?(ytd.google[mIdx]||0):0;
+  const spendMeta=mIdx!=null?(ytd.meta[mIdx]||0):0;
+  const carrier=rows.filter(isCarrier).length,broker=rows.filter(r=>isBroker(get(r,"type"))).length,hybrid=rows.filter(isHybrid).length;
+  const enterprise=rows.filter(entFlag).length;
+  const srcCount=sortObj(countBy(rows,r=>get(r,"source")||"Unknown"));
+  const sources=Object.entries(srcCount).map(([name,n])=>({name,n}));
+  const sqlAuto=(mIdx!=null&&hasSql)?(SQL_MONTHLY[mIdx]||0):null;
+  const demoAuto=(mIdx!=null&&hasSql)?(DEMOS_MONTHLY[mIdx]||0):null;
+  const funnelEntry=loadFunnelData()[key]||{};
+  const num=v=>(v!=null&&v!=="")?parseInt(v,10):null;
+  const sqls=num(funnelEntry.sqls)!=null?num(funnelEntry.sqls):sqlAuto;
+  const demos=num(funnelEntry.demos)!=null?num(funnelEntry.demos):demoAuto;
+  const connected=num(funnelEntry.connected);
+  const qualified=num(funnelEntry.qualified);
+  const convRate=mql?Math.round((sqls||0)/mql*1000)/10:0;
+  const withPu=rows.filter(r=>cleanInt(get(r,"pu"))!==null);
+  let topRow=null;
+  withPu.forEach(r=>{if(!topRow||cleanInt(get(r,"pu"))>cleanInt(get(topRow,"pu")))topRow=r;});
+  const puSorted=withPu.map(r=>cleanInt(get(r,"pu"))).sort((a,b)=>b-a);
+  const topPu=topRow?cleanInt(get(topRow,"pu")):0,secondPu=puSorted[1]||0;
+  const autoSuggest=withPu.length>1&&topPu>=200&&topPu>=secondPu*10;
+  const manual=reportManualFor(key);
+  const excludeTop=manual.fleetExcludeTop!=null?manual.fleetExcludeTop:autoSuggest;
+  const fleetRows=(excludeTop&&topRow)?withPu.filter(r=>r!==topRow):withPu;
+  const allFleetPu=fleetRows.reduce((s,r)=>s+cleanInt(get(r,"pu")),0);
+  const qualRows=fleetRows.filter(r=>cleanInt(get(r,"pu"))>=6);
+  const qualFleetPu=qualRows.reduce((s,r)=>s+cleanInt(get(r,"pu")),0);
+  return {monthText,key,mql,spendGoogle,spendMeta,spendTotal:spendGoogle+spendMeta,carrier,broker,hybrid,enterprise,
+    sources,sqls,demos,connected,qualified,convRate,
+    allFleetLeads:fleetRows.length,allFleetPu,qualFleetLeads:qualRows.length,qualFleetPu,
+    topRow,topPu,excludeTop};
+}
+function reportSlide2Html(d){
+  const outlierBlock=d.topRow?`<label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin-top:10px">
+      <input type="checkbox" id="rptFleetExclude" ${d.excludeTop?"checked":""}>
+      Exclude largest fleet as an outlier: ${esc(get(d.topRow,"company")||"—")} (${d.topPu.toLocaleString()} trucks)
+    </label>`:"";
+  return `<div class="rpt-slide" id="rptSlide2">
+    <div class="rpt-head">
+      <div class="htext"><h3>LoadStop | Overview at a Glance</h3><div class="sub">Marketing Report - ${esc(d.monthText)}</div></div>
+      <div class="accent"><div class="big">${d.mql.toLocaleString()}</div><div class="lab">MQLs</div></div>
+    </div>
+    <div class="rpt-body">
+      <div class="rpt-tiles">
+        <div class="rpt-tile navy"><div class="big">$${d.spendTotal.toLocaleString(undefined,{maximumFractionDigits:0})}</div><div class="lab">Ad Spend</div><div class="sub">Google Ads: $${d.spendGoogle.toLocaleString(undefined,{maximumFractionDigits:0})} · Meta: $${d.spendMeta.toLocaleString(undefined,{maximumFractionDigits:0})}</div></div>
+        <div class="rpt-tile navy2"><div class="big">${d.carrier} / ${d.broker} / ${d.hybrid}</div><div class="lab">Carrier / Broker / Hybrid</div><div class="sub">MQLs</div></div>
+        <div class="rpt-tile orange"><div class="big">${d.enterprise}</div><div class="lab">Enterprise Leads</div><div class="sub">80+ trucks or 751+ loads/mo</div></div>
+      </div>
+      <div class="grid2">
+        <div><p class="rpt-sub">MQL Source Breakdown</p><div class="chartbox"><canvas id="cRptSource"></canvas></div></div>
+        <div><p class="rpt-sub">Funnel</p>
+          <div style="text-align:center">
+            <div class="rpt-tile navy2" style="margin-bottom:8px"><div class="big">${d.mql.toLocaleString()}</div><div class="lab">MQLs</div></div>
+            <div class="cap" style="margin:4px 0">↓ Conversion Rate: ${d.convRate}%</div>
+            <div class="rpt-tile navy" style="margin-bottom:8px"><div class="big">${d.sqls!=null?d.sqls.toLocaleString():"–"}</div><div class="lab">SQLs</div></div>
+            <div class="rpt-tile navy" style="text-align:left;padding:14px 18px">
+              <div class="cap" style="color:#fff;opacity:.85;margin:0">Demos Scheduled: <b>${d.demos!=null?d.demos:"?"}</b></div>
+              <div class="cap" style="color:#fff;opacity:.85;margin:4px 0 0">Connected: <b>${d.connected!=null?d.connected:"?"}</b></div>
+              <div class="cap" style="color:#fff;opacity:.85;margin:4px 0 0">Qualified Demos: <b>${d.qualified!=null?d.qualified:"?"}</b></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="rpt-sub" style="margin-top:18px">FMCSA Verified Fleet Opportunity</p>
+      <div class="chartbox" style="height:220px"><canvas id="cRptFleet"></canvas></div>
+      ${outlierBlock}
+    </div>
+  </div>`;
+}
+function wireSlide2(key){
+  const cb=el("rptFleetExclude");
+  if(cb)cb.addEventListener("change",()=>{patchReportManual(key,{fleetExcludeTop:cb.checked});renderReport();});
+}
+
+/* ---- Slide 3: Converted Leads — structure fixed, everything manual ---- */
+function reportSlide3Data(key,autoSpend){
+  const manual=reportManualFor(key).conversions||{};
+  const rows=manual.rows||[];
+  const totalDeal=rows.reduce((s,r)=>s+(parseFloat(r.dealValue)||0),0);
+  const hasOverride=manual.adSpendOverride!=null&&manual.adSpendOverride!=="";
+  const adSpend=hasOverride?parseFloat(manual.adSpendOverride):autoSpend;
+  const roas=adSpend?Math.round(totalDeal/adSpend*10)/10:null;
+  const bySource=sortObj(countBy(rows,r=>r.source||"Unspecified"));
+  return {rows,totalDeal,adSpend:adSpend||0,roas,bySource,adSpendIsAuto:!hasOverride};
+}
+const REPORT_S3_COLS=["company","type","fmcsa","source","campaign","adgroup","state","dealValue"];
+const REPORT_S3_LABELS=["Company","Type","FMCSA Trucks","Source","Campaign/Record Source","Ad Group","State","Deal Value"];
+function reportSlide3Html(monthText,key,autoSpend){
+  const d=reportSlide3Data(key,autoSpend);
+  const rowsHtml=d.rows.map((r,i)=>`<tr><td>${i+1}</td>${REPORT_S3_COLS.map(c=>`<td><input class="rpt-input" data-idx="${i}" data-field="${c}" value="${esc(r[c]||"")}" ${c==="dealValue"?'type="number" step="0.01"':""} style="min-width:${c==="campaign"||c==="company"?"140px":"90px"}"></td>`).join("")}<td><button class="rpt-row-del" data-del="${i}" title="Remove row">✕</button></td></tr>`).join("");
+  const srcTiles=Object.entries(d.bySource).slice(0,3).map(([name,n])=>`<div class="rpt-tile green"><div class="big">${n}</div><div class="lab">Via ${esc(name)}</div></div>`).join("");
+  return `<div class="rpt-slide" id="rptSlide3">
+    <div class="rpt-head">
+      <div class="htext"><h3>LoadStop Converted Leads — ${esc(monthText)}</h3><div class="sub">MQL-to-Deal Attribution | Gravity Forms + HubSpot Source Data<span class="rpt-manual-badge">manual</span></div></div>
+      <div class="accent"><div class="big">$${d.totalDeal.toLocaleString(undefined,{maximumFractionDigits:0})}</div><div class="lab">Total Deal Value</div></div>
+    </div>
+    <div class="rpt-body">
+      <div class="rpt-tiles">
+        <div class="rpt-tile navy"><div class="big">${d.rows.length}</div><div class="lab">Conversions</div></div>
+        ${srcTiles}
+      </div>
+      <div class="rpt-tiles">
+        <div class="rpt-tile blue">
+          <div class="big">$${d.adSpend.toLocaleString(undefined,{maximumFractionDigits:0})}<span class="rpt-manual-badge" style="color:#fff;border-color:#fff">${d.adSpendIsAuto?"AUTO":"OVERRIDE"}</span></div>
+          <div class="lab">Ad Spend</div>
+          <input type="number" step="0.01" id="rptS3AdSpend" class="rpt-input" placeholder="override" value="${d.adSpendIsAuto?"":d.adSpend}" style="margin-top:6px;background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.4);color:#fff">
+        </div>
+        <div class="rpt-tile orange"><div class="big">${d.roas!=null?d.roas+"x":"—"}</div><div class="lab">Return on Ad Spend</div><div class="sub">based on conversions vs ad spend</div></div>
+      </div>
+      <div class="scroll"><table><thead><tr><th>#</th>${REPORT_S3_LABELS.map(l=>`<th>${l}</th>`).join("")}<th></th></tr></thead><tbody>${rowsHtml}</tbody></table></div>
+      <button class="rpt-row-add" id="rptS3AddRow">+ Add conversion</button>
+    </div>
+  </div>`;
+}
+function wireSlide3(key){
+  const getRows=()=>((reportManualFor(key).conversions||{}).rows||[]).slice();
+  const setRows=rows=>{const cur=reportManualFor(key).conversions||{};patchReportManual(key,{conversions:Object.assign({},cur,{rows})});};
+  document.querySelectorAll('#rptSlide3 input[data-field]').forEach(inp=>{
+    const field=inp.dataset.field,affectsTotals=field==="dealValue"||field==="source";
+    inp.addEventListener(affectsTotals?"change":"input",()=>{
+      const rows=getRows(),idx=+inp.dataset.idx;
+      if(!rows[idx])return;
+      rows[idx][field]=inp.value;
+      setRows(rows);
+      if(affectsTotals)renderReport();
+    });
+  });
+  document.querySelectorAll('#rptSlide3 [data-del]').forEach(btn=>{
+    btn.addEventListener("click",()=>{const rows=getRows();rows.splice(+btn.dataset.del,1);setRows(rows);renderReport();});
+  });
+  const addBtn=el("rptS3AddRow");
+  if(addBtn)addBtn.addEventListener("click",()=>{
+    const rows=getRows();
+    rows.push({company:"",type:"",fmcsa:"",source:"",campaign:"",adgroup:"",state:"",dealValue:""});
+    setRows(rows);renderReport();
+  });
+  const adSpendInp=el("rptS3AdSpend");
+  if(adSpendInp)adSpendInp.addEventListener("change",()=>{
+    const cur=reportManualFor(key).conversions||{};
+    patchReportManual(key,{conversions:Object.assign({},cur,{adSpendOverride:adSpendInp.value})});
+    renderReport();
+  });
+}
+
+/* ---- Slide 4: Enterprise Leads — fully automated ---- */
+function reportSlide4Data(monthText){
+  const rows=RAW.filter(r=>get(r,"month")===monthText).filter(entFlag);
+  const carrier=rows.filter(isCarrier).length,hybrid=rows.filter(isHybrid).length,broker=rows.filter(r=>isBroker(get(r,"type"))).length;
+  const data=rows.map(r=>{
+    const t=get(r,"type"),pu=cleanInt(get(r,"pu")),lpmRaw=get(r,"lpm"),lpm=lpmRaw?parseLPM(lpmRaw):null;
+    const truckQual=truckTierOf(pu)==="ent",loadQual=loadTierOf(lpm)==="ent";
+    const showLoads=isBroker(t)||(isHybrid(r)&&loadQual&&!truckQual);
+    return {company:get(r,"company")||"—",type:t||"—",source:get(r,"source")||"—",campaign:get(r,"campaign")||"—",
+      qualTxt:showLoads?`${(lpm||0).toLocaleString()}+ loads/mo`:`${pu?pu.toLocaleString():"—"} trucks`,state:get(r,"state")||"—"};
+  });
+  return {total:rows.length,carrier,broker,hybrid,data};
+}
+function reportSlide4Html(monthText){
+  const d=reportSlide4Data(monthText);
+  const rowsHtml=d.data.map(r=>`<tr><td>${esc(r.company)}</td><td>${esc(r.type)}</td><td>${esc(r.source)}</td><td>${esc(r.campaign)}</td><td><strong>${esc(r.qualTxt)}</strong></td><td>${esc(r.state)}</td></tr>`).join("")||`<tr><td colspan="6" style="color:var(--muted)">No enterprise-qualified leads this month.</td></tr>`;
+  return `<div class="rpt-slide" id="rptSlide4">
+    <div class="rpt-head"><div class="htext"><h3>LoadStop | Enterprise Leads</h3><div class="sub">${esc(monthText)}</div></div></div>
+    <div class="rpt-body">
+      <div class="rpt-tiles">
+        <div class="rpt-tile navy"><div class="big">${d.total}</div><div class="lab">Enterprise MQLs</div></div>
+        <div class="rpt-tile orange"><div class="big">${d.carrier}</div><div class="lab">Enterprise Carrier</div></div>
+        <div class="rpt-tile navy2"><div class="big">${d.broker}</div><div class="lab">Enterprise Brokers</div></div>
+        <div class="rpt-tile blue"><div class="big">${d.hybrid}</div><div class="lab">Enterprise Hybrid</div></div>
+      </div>
+      <div class="scroll"><table><thead><tr><th>Company</th><th>Type</th><th>Source</th><th>Campaign</th><th>Qualifier</th><th>State</th></tr></thead><tbody>${rowsHtml}</tbody></table></div>
+    </div>
+  </div>`;
+}
+
+/* ---- Slide 5: Mid-Tier Carrier Leads — fully automated (Carrier/Hybrid, 20-79 FMCSA trucks) ---- */
+function reportSlide5Data(monthText){
+  const rows=RAW.filter(r=>get(r,"month")===monthText).filter(r=>(isCarrier(r)||isHybrid(r))&&tierOf(r)==="icp");
+  const bySource=countBy(rows,r=>get(r,"source")||"Unknown");
+  const totalPu=rows.reduce((s,r)=>s+(cleanInt(get(r,"pu"))||0),0);
+  const data=rows.map(r=>{
+    const pu=cleanInt(get(r,"pu")),lpmRaw=get(r,"lpm"),lpm=lpmRaw?parseLPM(lpmRaw):null;
+    /* Hybrid can qualify for this tier via loads/month instead of trucks (per the corrected
+       criteria) — flag that so the FMCSA Trucks column doesn't show a sub-20 number with no
+       explanation of why the row is here at all. */
+    const viaLoads=isHybrid(r)&&loadTierOf(lpm)==="icp"&&truckTierOf(pu)!=="icp";
+    return {company:get(r,"company")||"—",type:get(r,"type")||"—",pu:pu||0,viaLoads,
+      puTxt:viaLoads?`${(lpm||0).toLocaleString()}+ loads/mo*`:(pu?pu.toLocaleString()+" trucks":"—"),
+      veh:get(r,"vc")||"—",source:get(r,"source")||"—",campaign:get(r,"campaign")||"—",adgroup:get(r,"adgroup")||"—",
+      state:get(r,"state")||"—",date:shortDate(get(r,"entrydate"))};
+  }).sort((a,b)=>b.pu-a.pu);
+  return {total:rows.length,totalPu,bySource,data,anyViaLoads:data.some(r=>r.viaLoads)};
+}
+function reportSlide5Html(monthText){
+  const d=reportSlide5Data(monthText);
+  const srcTiles=["Paid Search","Direct Traffic","Organic Search"].map(s=>{
+    const found=Object.entries(d.bySource).find(([k])=>k.toLowerCase()===s.toLowerCase());
+    return `<div class="rpt-tile blue"><div class="big">${found?found[1]:0}</div><div class="lab">${s}</div></div>`;
+  }).join("");
+  const rowsHtml=d.data.map((r,i)=>`<tr><td>${i+1}</td><td>${esc(r.company)}</td><td>${esc(r.type)}</td><td>${esc(r.puTxt)}</td><td>${esc(r.veh)}</td><td>${esc(r.source)}</td><td>${esc(r.campaign)}</td><td>${esc(r.adgroup)}</td><td>${esc(r.state)}</td><td>${esc(r.date)}</td></tr>`).join("")||`<tr><td colspan="10" style="color:var(--muted)">No mid-tier carrier leads this month.</td></tr>`;
+  const loadsFootnote=d.anyViaLoads?`<p class="cap" style="margin:8px 2px 0">* Hybrid lead qualifies via loads/month, not FMCSA trucks.</p>`:"";
+  return `<div class="rpt-slide" id="rptSlide5">
+    <div class="rpt-head"><div class="htext"><h3>LoadStop | Mid-Tier Carrier Leads</h3><div class="sub">${esc(monthText)} — FMCSA Power Units: 20 to 79 trucks (or 251–750 loads/mo for Hybrid)</div></div></div>
+    <div class="rpt-body">
+      <div class="rpt-tiles">
+        <div class="rpt-tile orange"><div class="big">${d.total}</div><div class="lab">Total MQLs</div></div>
+        <div class="rpt-tile navy"><div class="big">${d.totalPu.toLocaleString()}</div><div class="lab">Total FMCSA Trucks</div></div>
+        ${srcTiles}
+      </div>
+      <div class="scroll"><table><thead><tr><th>#</th><th>Company</th><th>Type</th><th>FMCSA Trucks</th><th>Veh. Count</th><th>Source</th><th>Campaign</th><th>Ad Group</th><th>State</th><th>Date</th></tr></thead><tbody>${rowsHtml}</tbody></table></div>
+      ${loadsFootnote}
+    </div>
+  </div>`;
+}
+
+/* ---- Slide 6: Month Over Month Overview — fully automated, static snapshot ---- */
+function reportSlide6Html(){
+  return `<div class="rpt-slide" id="rptSlide6">
+    <div class="rpt-head"><div class="htext"><h3>LoadStop | Month Over Month Overview</h3></div></div>
+    <div class="rpt-body">
+      <p class="rpt-sub">Leads Per Month</p>
+      <div class="chartbox tall" style="margin-bottom:24px"><canvas id="cRptLeadsMonth"></canvas></div>
+      <p class="rpt-sub">Monthly Spend — Year to Date</p>
+      <div class="chartbox tall"><canvas id="cRptSpendYtd"></canvas></div>
+    </div>
+  </div>`;
+}
+
+/* ---- Slide 7: Email Marketing — leads auto, platform stats manual ---- */
+function reportSlide7Data(monthText){
+  const rows=RAW.filter(r=>get(r,"month")===monthText&&/email/i.test(get(r,"source")));
+  return rows.map(r=>({company:get(r,"company")||"—",type:get(r,"type")||"—",pu:cleanInt(get(r,"pu")),
+    veh:get(r,"vc")||"—",state:get(r,"state")||"—",email:get(r,"email")||"—",date:shortDate(get(r,"entrydate"))}));
+}
+const REPORT_S7_STATS=[["emailsSent","Emails Sent"],["opened","Opened"],["openRate","Open Rate"],["ctr","CTR"],["submissions","Submissions"]];
+const REPORT_S7_SEG_COLS=["segment","campaigns","emailsSent","uniqueOpens","openRate","uniqueClicks","clickRate","ctor","bounceRate","unsubRate","leads"];
+const REPORT_S7_SEG_LABELS=["Segment","Campaigns","Emails Sent","Unique Opens","Open Rate","Unique Clicks","Click Rate","CTOR","Bounce Rate","Unsub Rate","Leads"];
+function reportSlide7Html(monthText,key){
+  const leads=reportSlide7Data(monthText);
+  const manual=reportEmailManual(key),stats=manual.stats||{},segments=manual.segments||[];
+  const statTiles=REPORT_S7_STATS.map(([f,lab])=>`<div class="rpt-tile navy2"><input class="rpt-input" data-stat="${f}" value="${esc(stats[f]||"")}" placeholder="—" style="text-align:center;background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.4);color:#fff;font-weight:800;font-size:15px"><div class="lab">${lab}</div></div>`).join("");
+  const segRows=segments.map((s,i)=>`<tr>${REPORT_S7_SEG_COLS.map(c=>`<td><input class="rpt-input" data-segidx="${i}" data-segfield="${c}" value="${esc(s[c]||"")}" style="min-width:70px"></td>`).join("")}<td><button class="rpt-row-del" data-segdel="${i}">✕</button></td></tr>`).join("");
+  const leadRows=leads.map(r=>`<tr><td>${esc(r.company)}</td><td>${esc(r.type)}</td><td>${r.pu?r.pu.toLocaleString()+" trucks":"—"}</td><td>${esc(r.veh)}</td><td>${esc(r.state)}</td><td>${esc(r.email)}</td><td>${esc(r.date)}</td></tr>`).join("")||`<tr><td colspan="7" style="color:var(--muted)">No Email-source leads this month.</td></tr>`;
+  return `<div class="rpt-slide" id="rptSlide7">
+    <div class="rpt-head"><div class="htext"><h3>LoadStop | Email Marketing</h3><div class="sub">${esc(monthText)}<span class="rpt-manual-badge">manual: platform stats</span></div></div></div>
+    <div class="rpt-body">
+      <div class="rpt-tiles">${statTiles}</div>
+      <p class="rpt-sub" style="margin-top:16px">Segment Performance <span class="rpt-manual-badge">manual</span></p>
+      <div class="scroll"><table><thead><tr>${REPORT_S7_SEG_LABELS.map(l=>`<th>${l}</th>`).join("")}<th></th></tr></thead><tbody>${segRows}</tbody></table></div>
+      <button class="rpt-row-add" id="rptS7AddSeg">+ Add segment</button>
+      <p class="rpt-sub" style="margin-top:20px">Email-Sourced Leads <span class="cap" style="font-weight:400">(auto from Gravity Sheet)</span></p>
+      <div class="scroll"><table><thead><tr><th>Company</th><th>Type</th><th>FMCSA Trucks</th><th>Veh. Count</th><th>State</th><th>Email Address</th><th>Entry Date</th></tr></thead><tbody>${leadRows}</tbody></table></div>
+    </div>
+  </div>`;
+}
+function wireSlide7(key){
+  document.querySelectorAll('#rptSlide7 input[data-stat]').forEach(inp=>{
+    inp.addEventListener("input",()=>{
+      const stats=Object.assign({},reportEmailManual(key).stats||{});
+      stats[inp.dataset.stat]=inp.value;
+      patchReportManual(key,{email:Object.assign({},reportEmailManual(key),{stats})});
+    });
+  });
+  const getSegs=()=>(reportEmailManual(key).segments||[]).slice();
+  document.querySelectorAll('#rptSlide7 input[data-segfield]').forEach(inp=>{
+    inp.addEventListener("input",()=>{
+      const segs=getSegs(),idx=+inp.dataset.segidx;
+      if(!segs[idx])return;
+      segs[idx][inp.dataset.segfield]=inp.value;
+      patchReportManual(key,{email:Object.assign({},reportEmailManual(key),{segments:segs})});
+    });
+  });
+  document.querySelectorAll('#rptSlide7 [data-segdel]').forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      const segs=getSegs();segs.splice(+btn.dataset.segdel,1);
+      patchReportManual(key,{email:Object.assign({},reportEmailManual(key),{segments:segs})});
+      renderReport();
+    });
+  });
+  const addBtn=el("rptS7AddSeg");
+  if(addBtn)addBtn.addEventListener("click",()=>{
+    const segs=getSegs();segs.push({});
+    patchReportManual(key,{email:Object.assign({},reportEmailManual(key),{segments:segs})});
+    renderReport();
+  });
+}
+
+/* ---- Charts, created after the HTML above is in the DOM ---- */
+function renderReportCharts(s2){
+  const srcEl=el("cRptSource");
+  if(srcEl){
+    if(charts.rptSource)charts.rptSource.destroy();
+    const total=s2.mql,opts=hbarOpts();
+    charts.rptSource=new Chart(srcEl,{type:"bar",data:{labels:s2.sources.map(s=>s.name),datasets:[{data:s2.sources.map(s=>s.n),backgroundColor:NAVY2,borderRadius:5,dataLabelFmt:v=>`${v.toLocaleString()} (${pct(v,total)}%)`}]},options:opts});
+  }
+  const fleetEl=el("cRptFleet");
+  if(fleetEl){
+    if(charts.rptFleet)charts.rptFleet.destroy();
+    const labels=[["All Verified Fleet",`(${s2.allFleetLeads} leads)`],["Qualified Fleet",`(Excl. 1-5 trucks, ${s2.qualFleetLeads} leads)`]];
+    charts.rptFleet=new Chart(fleetEl,{type:"bar",data:{labels,datasets:[{data:[s2.allFleetPu,s2.qualFleetPu],backgroundColor:[NAVY2,ORANGE],borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:26}},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.parsed.y.toLocaleString()} power units`}}},scales:{y:{beginAtZero:true,ticks:{precision:0},grid:{color:"#eef2f7"},title:{display:true,text:"Power Units in Pipeline"}},x:{grid:{display:false}}}}});
+  }
+  const leadsMonthEl=el("cRptLeadsMonth");
+  if(leadsMonthEl){
+    if(charts.rptLeadsMonth)charts.rptLeadsMonth.destroy();
+    const monthsChronoAll=allMonthsChrono();
+    const counts=monthsChronoAll.map(m=>RAW.filter(r=>get(r,"month")===m).length);
+    charts.rptLeadsMonth=new Chart(leadsMonthEl,{type:"bar",data:{labels:monthsChronoAll,datasets:[{data:counts,backgroundColor:NAVY2,borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:22}},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.parsed.y.toLocaleString()} leads`}}},scales:{y:{beginAtZero:true,ticks:{precision:0},grid:{color:"#eef2f7"}},x:{grid:{display:false}}}}});
+  }
+  const spendYtdEl=el("cRptSpendYtd");
+  if(spendYtdEl){
+    if(charts.rptSpendYtd)charts.rptSpendYtd.destroy();
+    const ytd=monthlySpendYTD();
+    const datasets=[{label:"Google Ads",data:ytd.google,backgroundColor:NAVY2,borderRadius:4}];
+    if(ytd.showMeta)datasets.push({label:"Meta Ads",data:ytd.meta,backgroundColor:"#4267B2",borderRadius:4});
+    charts.rptSpendYtd=new Chart(spendYtdEl,{type:"bar",data:{labels:ytd.labels,datasets},options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:32}},plugins:{legend:{display:ytd.showMeta,position:"bottom",labels:{boxWidth:11}},dataLabelPrefix:"$",dataLabelTotal:true,tooltip:{callbacks:{label:c=>` ${c.dataset.label}: $${c.parsed.y.toLocaleString(undefined,{maximumFractionDigits:2})}`}}},scales:{x:{stacked:ytd.showMeta,grid:{display:false}},y:{stacked:ytd.showMeta,beginAtZero:true,ticks:{callback:v=>"$"+v.toLocaleString()},grid:{color:"#eef2f7"}}}}});
+  }
+}
+
+function renderReport(){
+  const wrap=el("reportSlidesWrap");
+  if(!wrap||!RAW.length)return;
+  const months=reportMonths();
+  const sel=el("reportMonth");
+  if(sel&&!sel.dataset.wired){
+    sel.innerHTML=months.map(m=>`<option value="${esc(m)}">${esc(m)}</option>`).join("");
+    const now=new Date(),curKey=now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0");
+    const curLabel=months.find(m=>monthTextToKey(m)===curKey);
+    sel.value=curLabel||months[months.length-1]||"";
+    sel.addEventListener("change",renderReport);
+    sel.dataset.wired="1";
+  }
+  const monthText=(sel&&sel.value)?sel.value:months[months.length-1];
+  if(!monthText){wrap.innerHTML=`<p class="cap">No data available yet.</p>`;return;}
+  const key=monthTextToKey(monthText);
+  const s2=reportSlide2Data(monthText);
+  wrap.innerHTML=reportSlide1Html(monthText,key)+reportSlide2Html(s2)+reportSlide3Html(monthText,key,s2.spendTotal)+
+    reportSlide4Html(monthText)+reportSlide5Html(monthText)+reportSlide6Html()+reportSlide7Html(monthText,key);
+  wireSlide1(key);wireSlide2(key);wireSlide3(key);wireSlide7(key);
+  renderReportCharts(s2);
+  const slidesBtn=el("reportSlidesBtn");
+  if(slidesBtn&&!slidesBtn.dataset.wired){slidesBtn.addEventListener("click",exportToSlides);slidesBtn.dataset.wired="1";}
+}
+
+/* ============================================================
+   Google Slides export — client-side only (no backend), using Google
+   Identity Services for a browser OAuth token and the Slides/Drive
+   REST APIs directly. Builds a real, editable presentation matching
+   the report's structure. Requires a one-time Google Cloud OAuth
+   Client ID (public identifier, not a secret) with this deployed
+   origin authorized — the button no-ops with a clear message until
+   GOOGLE_CLIENT_ID is set and can't be exercised from a file:// or
+   unauthorized origin, since Google's OAuth is origin-locked.
+   ============================================================ */
+const GOOGLE_CLIENT_ID="129437983874-6dj82537rc7gppvqtpadolnin8hb71j4.apps.googleusercontent.com";
+const GOOGLE_SCOPES="https://www.googleapis.com/auth/presentations https://www.googleapis.com/auth/drive.file";
+let gisTokenClient=null;
+function ensureGis(cb){
+  if(window.google&&google.accounts&&google.accounts.oauth2){cb();return;}
+  const s=document.createElement("script");
+  s.src="https://accounts.google.com/gsi/client";
+  s.onload=cb;
+  s.onerror=()=>alert("Couldn't load Google's sign-in script — check your connection and try again.");
+  document.head.appendChild(s);
+}
+function getGoogleToken(cb){
+  ensureGis(()=>{
+    if(!gisTokenClient){
+      gisTokenClient=google.accounts.oauth2.initTokenClient({
+        client_id:GOOGLE_CLIENT_ID,scope:GOOGLE_SCOPES,
+        callback:resp=>{
+          if(resp.error){alert("Google sign-in failed: "+resp.error);return;}
+          cb(resp.access_token);
+        }
+      });
+    }
+    gisTokenClient.requestAccessToken();
+  });
+}
+async function gApi(method,url,token,body){
+  const res=await fetch(url,{method,headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:body?JSON.stringify(body):undefined});
+  if(!res.ok)throw new Error(`${method} ${url.split("?")[0]} failed: ${res.status} ${(await res.text()).slice(0,300)}`);
+  return res.status===204?null:res.json();
+}
+async function uploadImageToDrive(token,dataUrl,name){
+  const blob=await (await fetch(dataUrl)).blob();
+  const metadata={name,mimeType:"image/png"};
+  const boundary="loadstopreportboundary";
+  const enc=new TextEncoder();
+  const pre=enc.encode(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n--${boundary}\r\nContent-Type: image/png\r\n\r\n`);
+  const post=enc.encode(`\r\n--${boundary}--`);
+  const body=new Blob([pre,await blob.arrayBuffer(),post]);
+  const res=await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webContentLink",{method:"POST",headers:{Authorization:"Bearer "+token,"Content-Type":`multipart/related; boundary=${boundary}`},body});
+  if(!res.ok)throw new Error("Drive upload failed: "+res.status+" "+(await res.text()).slice(0,300));
+  const file=await res.json();
+  await gApi("POST",`https://www.googleapis.com/drive/v3/files/${file.id}/permissions`,token,{role:"reader",type:"anyone"});
+  return {id:file.id,url:file.webContentLink};
+}
+
+/* ---- Layout primitives (EMU coordinates, inches in, converted at the edge) ---- */
+const EMU_PER_IN=914400,PAGE_W_IN=13.333,PAGE_H_IN=7.5;
+const emu=inches=>Math.round(inches*EMU_PER_IN);
+let slidesReqSeq=0;
+function slidesNewId(prefix){return prefix+"_"+(slidesReqSeq++);}
+function hexToRgb01(hex){const h=hex.replace("#","");return {red:parseInt(h.substr(0,2),16)/255,green:parseInt(h.substr(2,2),16)/255,blue:parseInt(h.substr(4,2),16)/255};}
+function reqRect(slideId,x,y,w,h,fillHex){
+  const id=slidesNewId("rect");
+  return [
+    {createShape:{objectId:id,shapeType:"RECTANGLE",elementProperties:{pageObjectId:slideId,size:{width:{magnitude:emu(w),unit:"EMU"},height:{magnitude:emu(h),unit:"EMU"}},transform:{scaleX:1,scaleY:1,translateX:emu(x),translateY:emu(y),unit:"EMU"}}}},
+    {updateShapeProperties:{objectId:id,fields:"shapeBackgroundFill.solidFill.color,outline.propertyState",shapeProperties:{shapeBackgroundFill:{solidFill:{color:{rgbColor:hexToRgb01(fillHex)}}},outline:{propertyState:"NOT_RENDERED"}}}}
+  ];
+}
+function reqText(slideId,x,y,w,h,text,opts){
+  opts=opts||{};
+  const size=opts.size||11,color=opts.color||"#16232f",bold=!!opts.bold,align=opts.align||"START",fontFamily=opts.fontFamily||"Arial";
+  const id=slidesNewId("txt");
+  return [
+    {createShape:{objectId:id,shapeType:"TEXT_BOX",elementProperties:{pageObjectId:slideId,size:{width:{magnitude:emu(w),unit:"EMU"},height:{magnitude:emu(h),unit:"EMU"}},transform:{scaleX:1,scaleY:1,translateX:emu(x),translateY:emu(y),unit:"EMU"}}}},
+    {insertText:{objectId:id,text:String(text==null||text===""?" ":text)}},
+    {updateTextStyle:{objectId:id,textRange:{type:"ALL"},fields:"fontSize,foregroundColor,bold,fontFamily",style:{fontSize:{magnitude:size,unit:"PT"},foregroundColor:{opaqueColor:{rgbColor:hexToRgb01(color)}},bold,fontFamily}}},
+    {updateParagraphStyle:{objectId:id,textRange:{type:"ALL"},fields:"alignment",style:{alignment:align}}}
+  ];
+}
+function reqImage(slideId,x,y,w,h,url){
+  if(!url)return [];
+  const id=slidesNewId("img");
+  return [{createImage:{objectId:id,url,elementProperties:{pageObjectId:slideId,size:{width:{magnitude:emu(w),unit:"EMU"},height:{magnitude:emu(h),unit:"EMU"}},transform:{scaleX:1,scaleY:1,translateX:emu(x),translateY:emu(y),unit:"EMU"}}}}];
+}
+function reqTable(slideId,x,y,w,h,rows2d){
+  if(!rows2d.length||!rows2d[0].length)return [];
+  const id=slidesNewId("tbl"),numRows=rows2d.length,numCols=rows2d[0].length;
+  const reqs=[{createTable:{objectId:id,elementProperties:{pageObjectId:slideId,size:{width:{magnitude:emu(w),unit:"EMU"},height:{magnitude:emu(h),unit:"EMU"}},transform:{scaleX:1,scaleY:1,translateX:emu(x),translateY:emu(y),unit:"EMU"}},rows:numRows,columns:numCols}}];
+  rows2d.forEach((row,ri)=>{
+    row.forEach((cellText,ci)=>{
+      if(cellText==null||cellText==="")return;
+      reqs.push({insertText:{objectId:id,cellLocation:{rowIndex:ri,columnIndex:ci},text:String(cellText)}});
+      reqs.push({updateTextStyle:{objectId:id,cellLocation:{rowIndex:ri,columnIndex:ci},textRange:{type:"ALL"},fields:"bold,fontSize",style:{bold:ri===0,fontSize:{magnitude:ri===0?8.5:8,unit:"PT"}}}});
+    });
+  });
+  return reqs;
+}
+function reqTileRow(slideId,x,y,w,h,tiles){
+  const n=tiles.length,gap=0.15,tileW=(w-(n-1)*gap)/n;
+  let reqs=[];
+  tiles.forEach((t,i)=>{
+    const tx=x+i*(tileW+gap);
+    reqs=reqs.concat(reqRect(slideId,tx,y,tileW,h,t.color));
+    reqs=reqs.concat(reqText(slideId,tx+0.05,y+0.1,tileW-0.1,0.4,String(t.value),{size:t.size||16,color:"#fff",bold:true,align:"CENTER"}));
+    reqs=reqs.concat(reqText(slideId,tx+0.05,y+h-0.42,tileW-0.1,0.25,t.label,{size:8,color:"#fff",align:"CENTER"}));
+    if(t.sub)reqs=reqs.concat(reqText(slideId,tx+0.05,y+h-0.2,tileW-0.1,0.35,t.sub,{size:6.5,color:"#dbe4ef",align:"CENTER"}));
+  });
+  return reqs;
+}
+function reqHeader(slideId,title,sub,accent){
+  let reqs=reqRect(slideId,0,0,PAGE_W_IN,0.95,"#0D2B4E");
+  reqs=reqs.concat(reqText(slideId,0.35,0.15,accent?PAGE_W_IN-2.6:PAGE_W_IN-0.7,0.4,title,{size:17,color:"#fff",bold:true}));
+  if(sub)reqs=reqs.concat(reqText(slideId,0.35,0.58,accent?PAGE_W_IN-2.6:PAGE_W_IN-0.7,0.3,sub,{size:9.5,color:"#cfd8e3"}));
+  if(accent){
+    reqs=reqs.concat(reqRect(slideId,PAGE_W_IN-2.2,0,2.2,0.95,"#E87722"));
+    reqs=reqs.concat(reqText(slideId,PAGE_W_IN-2.2,0.14,2.2,0.4,String(accent.value),{size:23,color:"#fff",bold:true,align:"CENTER"}));
+    reqs=reqs.concat(reqText(slideId,PAGE_W_IN-2.2,0.6,2.2,0.25,accent.label,{size:9,color:"#fff",align:"CENTER"}));
+  }
+  return reqs;
+}
+
+/* ---- Per-slide request builders — same data objects as the on-page HTML ---- */
+function slidesSlide1(slideId,monthText,deptComments){
+  let reqs=reqHeader(slideId,"LoadStop | Marketing Team Initiatives",monthText);
+  const rows=[["Department","Notes"]].concat(REPORT_DEPTS.map(d=>[d,deptComments[d]||""]));
+  return reqs.concat(reqTable(slideId,0.35,1.15,PAGE_W_IN-0.7,5.9,rows));
+}
+function slidesSlide2(slideId,s2,imgUrls){
+  let reqs=reqHeader(slideId,"LoadStop | Overview at a Glance",`Marketing Report - ${s2.monthText}`,{value:s2.mql,label:"MQLs"});
+  reqs=reqs.concat(reqTileRow(slideId,0.35,1.2,PAGE_W_IN-0.7,1.15,[
+    {value:"$"+s2.spendTotal.toLocaleString(undefined,{maximumFractionDigits:0}),label:"Ad Spend",sub:`Google: $${Math.round(s2.spendGoogle).toLocaleString()} · Meta: $${Math.round(s2.spendMeta).toLocaleString()}`,color:"#0D2B4E",size:17},
+    {value:`${s2.carrier} / ${s2.broker} / ${s2.hybrid}`,label:"Carrier / Broker / Hybrid MQLs",color:"#1B4F8A",size:15},
+    {value:s2.enterprise,label:"Enterprise Leads",sub:"80+ trucks or 751+ loads/mo",color:"#E87722",size:19}
+  ]));
+  reqs=reqs.concat(reqText(slideId,0.35,2.6,5.8,0.3,"MQL Source Breakdown",{size:11,bold:true,color:"#0D2B4E"}));
+  reqs=reqs.concat(reqImage(slideId,0.35,2.95,5.8,2.6,imgUrls.src));
+  reqs=reqs.concat(reqText(slideId,6.5,2.6,PAGE_W_IN-6.85,0.3,"Funnel",{size:11,bold:true,color:"#0D2B4E"}));
+  const funnelTxt=[`MQLs: ${s2.mql.toLocaleString()}`,`Conversion Rate: ${s2.convRate}%`,`SQLs: ${s2.sqls!=null?s2.sqls:"?"}`,`Demos Scheduled: ${s2.demos!=null?s2.demos:"?"}`,`Connected: ${s2.connected!=null?s2.connected:"?"}`,`Qualified Demos: ${s2.qualified!=null?s2.qualified:"?"}`].join("\n");
+  reqs=reqs.concat(reqText(slideId,6.5,3.0,PAGE_W_IN-6.85,2.4,funnelTxt,{size:13,color:"#16232f"}));
+  reqs=reqs.concat(reqText(slideId,0.35,5.75,7,0.3,"FMCSA Verified Fleet Opportunity",{size:11,bold:true,color:"#0D2B4E"}));
+  reqs=reqs.concat(reqImage(slideId,0.35,6.1,PAGE_W_IN-0.7,1.2,imgUrls.fleet));
+  return reqs;
+}
+function slidesSlide3(slideId,monthText,s3){
+  let reqs=reqHeader(slideId,`LoadStop Converted Leads — ${monthText}`,"MQL-to-Deal Attribution | Gravity Forms + HubSpot Source Data",{value:"$"+s3.totalDeal.toLocaleString(undefined,{maximumFractionDigits:0}),label:"Total Deal Value"});
+  const srcTiles=Object.entries(s3.bySource).slice(0,3).map(([name,n])=>({value:n,label:"Via "+name,color:"#1a7f45"}));
+  reqs=reqs.concat(reqTileRow(slideId,0.35,1.2,PAGE_W_IN-0.7,0.85,[{value:s3.rows.length,label:"Conversions",color:"#0D2B4E"}].concat(srcTiles)));
+  reqs=reqs.concat(reqTileRow(slideId,0.35,2.2,PAGE_W_IN-0.7,0.85,[
+    {value:"$"+s3.adSpend.toLocaleString(undefined,{maximumFractionDigits:0}),label:"Ad Spend"+(s3.adSpendIsAuto?" (auto)":""),color:"#2E7ABF"},
+    {value:s3.roas!=null?s3.roas+"x":"—",label:"Return on Ad Spend",color:"#E87722"}
+  ]));
+  const rows=[REPORT_S3_LABELS].concat(s3.rows.map(r=>REPORT_S3_COLS.map(c=>r[c]||"")));
+  return reqs.concat(reqTable(slideId,0.35,3.25,PAGE_W_IN-0.7,3.8,rows));
+}
+function slidesSlide4(slideId,monthText,s4){
+  let reqs=reqHeader(slideId,"LoadStop | Enterprise Leads",monthText);
+  reqs=reqs.concat(reqTileRow(slideId,0.35,1.2,PAGE_W_IN-0.7,0.9,[
+    {value:s4.total,label:"Enterprise MQLs",color:"#0D2B4E"},
+    {value:s4.carrier,label:"Enterprise Carrier",color:"#E87722"},
+    {value:s4.broker,label:"Enterprise Brokers",color:"#1B4F8A"},
+    {value:s4.hybrid,label:"Enterprise Hybrid",color:"#2E7ABF"}
+  ]));
+  const rows=[["Company","Type","Source","Campaign","Qualifier","State"]].concat(s4.data.map(r=>[r.company,r.type,r.source,r.campaign,r.qualTxt,r.state]));
+  return reqs.concat(reqTable(slideId,0.35,2.3,PAGE_W_IN-0.7,4.8,rows));
+}
+function slidesSlide5(slideId,monthText,s5){
+  let reqs=reqHeader(slideId,"LoadStop | Mid-Tier Carrier Leads",`${monthText} — FMCSA Power Units: 20 to 79 trucks (or 251–750 loads/mo for Hybrid)`);
+  const srcTiles=["Paid Search","Direct Traffic","Organic Search"].map(s=>{
+    const found=Object.entries(s5.bySource).find(([k])=>k.toLowerCase()===s.toLowerCase());
+    return {value:found?found[1]:0,label:s,color:"#2E7ABF"};
+  });
+  reqs=reqs.concat(reqTileRow(slideId,0.35,1.2,PAGE_W_IN-0.7,0.9,[
+    {value:s5.total,label:"Total MQLs",color:"#E87722"},{value:s5.totalPu.toLocaleString(),label:"Total FMCSA Trucks",color:"#0D2B4E"}
+  ].concat(srcTiles)));
+  const rows=[["#","Company","Type","FMCSA Trucks","Veh. Count","Source","Campaign","Ad Group","State","Date"]]
+    .concat(s5.data.map((r,i)=>[i+1,r.company,r.type,r.puTxt,r.veh,r.source,r.campaign,r.adgroup,r.state,r.date]));
+  return reqs.concat(reqTable(slideId,0.35,2.3,PAGE_W_IN-0.7,4.8,rows));
+}
+function slidesSlide6(slideId,imgUrls){
+  let reqs=reqHeader(slideId,"LoadStop | Month Over Month Overview");
+  reqs=reqs.concat(reqText(slideId,0.35,1.15,6,0.3,"Leads Per Month",{size:11,bold:true,color:"#0D2B4E"}));
+  reqs=reqs.concat(reqImage(slideId,0.35,1.5,PAGE_W_IN-0.7,2.7,imgUrls.leadsMonth));
+  reqs=reqs.concat(reqText(slideId,0.35,4.35,6,0.3,"Monthly Spend — Year to Date",{size:11,bold:true,color:"#0D2B4E"}));
+  reqs=reqs.concat(reqImage(slideId,0.35,4.7,PAGE_W_IN-0.7,2.55,imgUrls.spendYtd));
+  return reqs;
+}
+function slidesSlide7(slideId,monthText,leads,stats,segments){
+  let reqs=reqHeader(slideId,"LoadStop | Email Marketing",monthText);
+  reqs=reqs.concat(reqTileRow(slideId,0.35,1.2,PAGE_W_IN-0.7,0.85,REPORT_S7_STATS.map(([f,lab])=>({value:stats[f]||"—",label:lab,color:"#1B4F8A",size:13}))));
+  reqs=reqs.concat(reqText(slideId,0.35,2.2,6,0.25,"Segment Performance",{size:10,bold:true,color:"#0D2B4E"}));
+  const segRows=[REPORT_S7_SEG_LABELS].concat(segments.map(s=>REPORT_S7_SEG_COLS.map(c=>s[c]||"")));
+  reqs=reqs.concat(segments.length?reqTable(slideId,0.35,2.55,PAGE_W_IN-0.7,1.9,segRows):reqText(slideId,0.35,2.55,PAGE_W_IN-0.7,0.3,"No segments entered.",{size:10,color:"#64748b"}));
+  reqs=reqs.concat(reqText(slideId,0.35,4.6,6,0.25,"Email-Sourced Leads",{size:10,bold:true,color:"#0D2B4E"}));
+  const leadRows=[["Company","Type","FMCSA Trucks","Veh. Count","State","Email","Date"]].concat(leads.map(r=>[r.company,r.type,r.pu?r.pu+" trucks":"—",r.veh,r.state,r.email,r.date]));
+  return reqs.concat(reqTable(slideId,0.35,4.95,PAGE_W_IN-0.7,2.2,leadRows));
+}
+
+async function buildAndCreatePresentation(token,monthText,progress){
+  const key=monthTextToKey(monthText);
+  const s2=reportSlide2Data(monthText);
+  const s3=reportSlide3Data(key,s2.spendTotal);
+  const s4=reportSlide4Data(monthText);
+  const s5=reportSlide5Data(monthText);
+  const s7leads=reportSlide7Data(monthText);
+  const s7manual=reportEmailManual(key);
+  const deptComments=reportManualFor(key).deptComments||{};
+
+  progress("Uploading charts…");
+  const uploaded=[];
+  const grab=async(chart,name)=>{
+    if(!chart)return null;
+    const r=await uploadImageToDrive(token,chart.toBase64Image(),name);
+    uploaded.push(r.id);
+    return r.url;
+  };
+  const imgUrls={
+    src:await grab(charts.rptSource,"mql-source.png"),
+    fleet:await grab(charts.rptFleet,"fleet-opportunity.png"),
+    leadsMonth:await grab(charts.rptLeadsMonth,"leads-per-month.png"),
+    spendYtd:await grab(charts.rptSpendYtd,"spend-ytd.png")
+  };
+
+  progress("Creating presentation…");
+  const pres=await gApi("POST","https://slides.googleapis.com/v1/presentations",token,{
+    title:`LoadStop Marketing Report — ${monthText}`,
+    pageSize:{width:{magnitude:emu(PAGE_W_IN),unit:"EMU"},height:{magnitude:emu(PAGE_H_IN),unit:"EMU"}}
+  });
+  const firstSlideId=pres.slides[0].objectId;
+  const otherSlideIds=[2,3,4,5,6,7].map(()=>slidesNewId("slide"));
+  const slideIds=[firstSlideId].concat(otherSlideIds);
+
+  const removeDefaults=(pres.slides[0].pageElements||[]).map(pe=>({deleteObject:{objectId:pe.objectId}}));
+  const createSlideReqs=otherSlideIds.map(id=>({createSlide:{objectId:id}}));
+
+  progress("Writing content…");
+  await gApi("POST",`https://slides.googleapis.com/v1/presentations/${pres.presentationId}:batchUpdate`,token,{requests:removeDefaults.concat(createSlideReqs)});
+  /* One big batch would risk hitting response size/complexity limits with 7 dense slides — send
+     each slide's requests as its own batchUpdate call instead, sequentially, so a problem on one
+     slide doesn't blank out ones that already succeeded. */
+  const perSlide=[slidesSlide1(slideIds[0],monthText,deptComments),
+    slidesSlide2(slideIds[1],s2,imgUrls),slidesSlide3(slideIds[2],monthText,s3),
+    slidesSlide4(slideIds[3],monthText,s4),slidesSlide5(slideIds[4],monthText,s5),
+    slidesSlide6(slideIds[5],imgUrls),slidesSlide7(slideIds[6],monthText,s7leads,s7manual.stats||{},s7manual.segments||[])];
+  for(const reqs of perSlide){
+    if(reqs.length)await gApi("POST",`https://slides.googleapis.com/v1/presentations/${pres.presentationId}:batchUpdate`,token,{requests:reqs});
+  }
+
+  progress("Cleaning up…");
+  for(const fileId of uploaded){
+    try{await gApi("DELETE",`https://www.googleapis.com/drive/v3/files/${fileId}`,token);}catch(e){}
+  }
+  return `https://docs.google.com/presentation/d/${pres.presentationId}/edit`;
+}
+
+function exportToSlides(){
+  const btn=el("reportSlidesBtn"),note=el("reportSlidesNote");
+  const monthText=el("reportMonth")?el("reportMonth").value:null;
+  if(!monthText)return;
+  if(!GOOGLE_CLIENT_ID){if(note)note.textContent="Google Slides export isn't set up yet.";return;}
+  btn.disabled=true;
+  const setStatus=msg=>{btn.textContent=msg;};
+  setStatus("Connecting to Google…");
+  getGoogleToken(token=>{
+    buildAndCreatePresentation(token,monthText,setStatus).then(url=>{
+      btn.disabled=false;btn.textContent="Open in Google Slides";
+      if(note)note.textContent="";
+      window.open(url,"_blank");
+    }).catch(err=>{
+      btn.disabled=false;btn.textContent="Open in Google Slides";
+      if(note)note.textContent="Failed — see console for details.";
+      console.error(err);
+      alert("Couldn't create the Slides deck: "+(err&&err.message?err.message:err));
+    });
+  });
+}
 </script>
 </body>
 </html>
