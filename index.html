@@ -483,6 +483,11 @@
     <p class="cap" id="compareDrilldownCap">Exact values for every selected metric and month — useful once the chart above has a lot going on.</p>
     <div class="scroll"><div id="compareDrilldownTable"></div></div>
   </div>
+  <div class="panel hidden" id="compareSummaryPanel">
+    <h3>Metric Summary</h3>
+    <p class="cap">Total, average, lowest/highest month, and change across your selected months, for each selected metric.</p>
+    <div class="scroll"><div id="compareSummaryTable"></div></div>
+  </div>
   <div class="panel hidden" id="compareNoAdsMsg"><p class="cap" style="margin:0">Connect your Ads Sheet from the <b>Dashboard</b> tab to unlock this page.</p></div>
 </div>
 
@@ -1287,16 +1292,18 @@ function compareMetricDefs(){
 }
 function renderCustomCompare(){
   const head=el("customCompareHead"),panel=el("customComparePanel");
-  const drilldownPanel=el("compareDrilldownPanel"),noAdsMsg=el("compareNoAdsMsg");
+  const drilldownPanel=el("compareDrilldownPanel"),summaryPanel=el("compareSummaryPanel"),noAdsMsg=el("compareNoAdsMsg");
   if(!panel)return;
   if(!hasAds){
     head.classList.add("hidden");panel.classList.add("hidden");
     if(drilldownPanel)drilldownPanel.classList.add("hidden");
+    if(summaryPanel)summaryPanel.classList.add("hidden");
     if(noAdsMsg)noAdsMsg.classList.remove("hidden");
     return;
   }
   head.classList.remove("hidden");panel.classList.remove("hidden");
   if(drilldownPanel)drilldownPanel.classList.remove("hidden");
+  if(summaryPanel)summaryPanel.classList.remove("hidden");
   if(noAdsMsg)noAdsMsg.classList.add("hidden");
 
   const {ytd,defs}=compareMetricDefs();
@@ -1347,6 +1354,8 @@ function renderCustomCompare(){
     if(charts.customCompare){charts.customCompare.destroy();charts.customCompare=null;}
     const dtWrapEmpty=el("compareDrilldownTable");
     if(dtWrapEmpty)dtWrapEmpty.innerHTML="";
+    const sumWrapEmpty=el("compareSummaryTable");
+    if(sumWrapEmpty)sumWrapEmpty.innerHTML="";
     return;
   }
   if(emptyMsg)emptyMsg.classList.add("hidden");
@@ -1421,6 +1430,38 @@ function renderCustomCompare(){
       return `<tr class="${isCur?"curmonth":""}"><td>${labels[ri]}${isCur?' <span class="curtag">current</span>':""}</td>${cells}</tr>`;
     }).join("");
     dtWrap.innerHTML=`<table class="matrixtable"><thead><tr>${headHtml}</tr></thead><tbody>${rowsHtml}</tbody></table>`;
+  }
+
+  /* Metric Summary — total/average/lowest/highest/change per selected metric across the selected
+     months, so a wide chart with many months doesn't force manual eyeballing to spot the extremes. */
+  const sumWrap=el("compareSummaryTable");
+  if(sumWrap){
+    const sumRows=activeMetrics.map(m=>{
+      const vals=activeIdx.map(i=>m.vals[i]);
+      const total=vals.reduce((a,b)=>a+b,0);
+      const average=vals.length?total/vals.length:0;
+      let minI=0,maxI=0;
+      vals.forEach((v,i)=>{if(v<vals[minI])minI=i;if(v>vals[maxI])maxI=i;});
+      const first=vals[0],last=vals[vals.length-1];
+      const changeHtml=vals.length<=1?`<span class="cap">–</span>`
+        :m.format==="percent"
+          /* percent metrics: a relative "% change of a %" reads as nonsense, so show percentage-point
+             movement instead — same "pp" convention as the Month-over-Month change table. */
+          ?(()=>{const d=Math.round((last-first)*10)/10,cls=d>0?"up":d<0?"down":"flat",ar=d>0?"▲":d<0?"▼":"–";
+            return `<span class="chip ${cls}">${ar} ${Math.abs(d)} pp</span>`;})()
+          :deltaChipFmt(last,first,d=>{const s=fmtValue(Math.abs(d),m.format);return d<0?"-"+s:s;});
+      const totalCell=m.format==="percent"?`<span class="cap">–</span>`:fmtValue(total,m.format);
+      return `<tr>
+        <td>${esc(m.label)}</td>
+        <td class="num">${totalCell}</td>
+        <td class="num">${fmtValue(average,m.format)}</td>
+        <td class="num">${fmtValue(vals[minI],m.format)} <span class="cap">(${esc(labels[minI])})</span></td>
+        <td class="num">${fmtValue(vals[maxI],m.format)} <span class="cap">(${esc(labels[maxI])})</span></td>
+        <td class="num">${changeHtml}</td>
+      </tr>`;
+    }).join("");
+    const changeColLabel=activeIdx.length>1?`Change (${esc(labels[0])} → ${esc(labels[labels.length-1])})`:"Change";
+    sumWrap.innerHTML=`<table class="matrixtable"><thead><tr><th>Metric</th><th class="num">Total</th><th class="num">Average</th><th class="num">Lowest</th><th class="num">Highest</th><th class="num">${changeColLabel}</th></tr></thead><tbody>${sumRows}</tbody></table>`;
   }
 }
 function saveFunnelInputs(){
