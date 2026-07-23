@@ -272,7 +272,7 @@
       </div>
       <div class="fgroup"><label>Source</label><select class="fsel" id="fSource"><option value="all">All sources</option></select></div>
       <div class="fgroup"><label>Fleet Tier</label>
-        <select class="fsel" id="fTier"><option value="all">All tiers</option><option value="ent">Enterprise 80+</option><option value="icp">ICP 25–79</option><option value="sub">Sub-ICP &lt;25</option><option value="none">No FMCSA</option></select>
+        <select class="fsel" id="fTier"><option value="all">All tiers</option><option value="ent">Enterprise 80+/751+</option><option value="icp">Mid-Tier 20–79/251–750</option><option value="sub">Sub-ICP &lt;20/100–250</option><option value="none">No FMCSA</option></select>
       </div>
       <div class="fgroup"><label>Meeting</label>
         <select class="fsel" id="fBooked"><option value="all">All</option><option value="booked">Booked only</option><option value="not">Not booked</option></select>
@@ -461,7 +461,7 @@
     </div>
 
     <div class="sechead"><h2>Enterprise Leads</h2><div class="line"></div></div>
-    <div class="panel"><h3>Enterprise Qualified</h3><p class="cap">Carrier/Hybrid 80+ FMCSA trucks, or Broker 300+ loads/month. Sortable.</p><div class="scroll"><table id="tEnt"></table></div></div>
+    <div class="panel"><h3>Enterprise Qualified</h3><p class="cap">Carrier/Hybrid 80+ FMCSA trucks, or Broker 751+ loads/month (Hybrid qualifies via either). Sortable.</p><div class="scroll"><table id="tEnt"></table></div></div>
 
     <div class="foot">Generated in-browser · LoadStop Lead Intelligence · FMCSA Power Units = authoritative fleet signal · All entries treated as MQLs</div>
   </div>
@@ -544,9 +544,24 @@ const isCarrier=r=>{const t=get(r,"type");return /carrier/i.test(t)&&!/hybrid/i.
 const isHybrid=r=>/hybrid/i.test(get(r,"type"));
 const isPaidSrc=r=>/google|meta|facebook|instagram|linkedin|bing|cpc|ppc|paid|ads/i.test(get(r,"source"));
 function typeOf(r){const t=get(r,"type");if(isBroker(t))return"broker";if(/hybrid/i.test(t))return"hybrid";if(/carrier/i.test(t))return"carrier";return"other";}
-function tierOf(r){const pu=cleanInt(get(r,"pu"));if(pu===null)return"none";if(pu>=80)return"ent";if(pu>=25)return"icp";return"sub";}
+/* Tier is truck-based (FMCSA Power Units) for Carrier, loads/month-based for Broker (no FMCSA
+   equivalent for load volume), and whichever is more favorable for Hybrid — self-reported Vehicle
+   Count never qualifies a lead into a higher tier. A broker below 100 loads/month (or with no
+   loads/month data) gets no tier, same treatment as a carrier with no FMCSA record. */
+function truckTierOf(pu){if(pu===null)return null;if(pu>=80)return"ent";if(pu>=20)return"icp";return"sub";}
+function loadTierOf(lpm){if(lpm===null)return null;if(lpm>=751)return"ent";if(lpm>=251)return"icp";if(lpm>=100)return"sub";return null;}
+function tierOf(r){
+  const type=get(r,"type"),pu=cleanInt(get(r,"pu")),lpmRaw=get(r,"lpm"),lpm=lpmRaw?parseLPM(lpmRaw):null;
+  const truckTier=truckTierOf(pu),loadTier=loadTierOf(lpm);
+  const rank={ent:3,icp:2,sub:1};
+  let best;
+  if(isBroker(type))best=loadTier;
+  else if(isHybrid(r))best=(truckTier&&loadTier)?(rank[truckTier]>=rank[loadTier]?truckTier:loadTier):(truckTier||loadTier);
+  else best=truckTier;
+  return best||"none";
+}
 function isBooked(r){if(!hasBooked)return false;const v=get(r,"booked").toLowerCase();return /^(y|yes|booked|true|1|scheduled|complete|done|confirm|✓|✔)/.test(v);}
-function entFlag(r){const t=get(r,"type"),pu=cleanInt(get(r,"pu")),lpm=parseLPM(get(r,"lpm"));return isBroker(t)?lpm>=300:(pu!==null&&pu>=80);}
+function entFlag(r){return tierOf(r)==="ent";}
 function monthSort(a,b){const pa=MONTHS.findIndex(m=>a.toLowerCase().includes(m)),pb=MONTHS.findIndex(m=>b.toLowerCase().includes(m));if(pa!==pb)return pa-pb;return a.localeCompare(b);}
 /* Builds a year-aware chronological key per Month-text bucket from Entry Date, so
    "November"/"December" from one year sort before "January"+ from the next — a plain
@@ -581,7 +596,7 @@ function aggArray(rows,keyFn){return Object.entries(agg(rows,keyFn)).map(([name,
 /* metrics for a row set */
 function computeMetrics(rows){
   const n=rows.length; let puAll=0,nF=0,pus=[],tier={ent:0,icp:0,sub:0,none:0};
-  rows.forEach(r=>{const pu=cleanInt(get(r,"pu"));if(pu===null){tier.none++;return;}nF++;puAll+=pu;pus.push(pu);if(pu>=80)tier.ent++;else if(pu>=25)tier.icp++;else tier.sub++;});
+  rows.forEach(r=>{const pu=cleanInt(get(r,"pu"));if(pu!==null){nF++;puAll+=pu;pus.push(pu);}tier[tierOf(r)]++;});
   const carrier=rows.filter(isCarrier).length,broker=rows.filter(r=>isBroker(get(r,"type"))).length,hybrid=rows.filter(isHybrid).length;
   const enterprise=rows.filter(entFlag).length,booked=rows.filter(isBooked).length,icpPlus=tier.ent+tier.icp;
   return {total:n,carrier,broker,hybrid,other:n-carrier-broker-hybrid,booked,enterprise,icpPlus,fmcsa:nF,puAll,avgPU:avg(pus),medPU:median(pus),
@@ -1549,7 +1564,7 @@ function render(){
   const fbits=[el("monthSel").selectedOptions[0].text];
   if(FILTERS.type!=="all")fbits.push(cap(FILTERS.type));
   if(FILTERS.source!=="all")fbits.push(FILTERS.source);
-  if(FILTERS.tier!=="all")fbits.push({ent:"Enterprise",icp:"ICP",sub:"Sub-ICP",none:"No FMCSA"}[FILTERS.tier]);
+  if(FILTERS.tier!=="all")fbits.push({ent:"Enterprise",icp:"Mid-Tier",sub:"Sub-ICP",none:"No FMCSA"}[FILTERS.tier]);
   if(FILTERS.booked!=="all")fbits.push(FILTERS.booked==="booked"?"Booked":"Not booked");
   el("subhead").textContent=fbits.join(" · ");
 
@@ -1669,8 +1684,8 @@ function render(){
   }
 
   /* Funnel */
-  const brokerEnt=rows.filter(r=>isBroker(get(r,"type"))&&parseLPM(get(r,"lpm"))>=750).length;
-  const stages=[{l:"Total Leads",v:M.total,c:NAVY},{l:"FMCSA Verified",v:M.fmcsa,c:NAVY2},{l:"ICP+ (25+ trucks)",v:M.icpPlus,c:BLUE},{l:"Enterprise (80+)",v:M.tier.ent,c:ORANGE},{l:"Broker Enterprise (750+ loads)",v:brokerEnt,c:"#7c3aed",parent:0}];
+  const brokerEnt=rows.filter(r=>isBroker(get(r,"type"))&&parseLPM(get(r,"lpm"))>=751).length;
+  const stages=[{l:"Total Leads",v:M.total,c:NAVY},{l:"FMCSA Verified",v:M.fmcsa,c:NAVY2},{l:"ICP+ (Mid-Tier or better)",v:M.icpPlus,c:BLUE},{l:"Enterprise",v:M.tier.ent,c:ORANGE},{l:"Broker Enterprise (751+ loads)",v:brokerEnt,c:"#7c3aed",parent:0}];
   const fmax=M.total||1;
   el("funnel").innerHTML=stages.map((s,i)=>{
     const w=Math.max(4,s.v/fmax*100),ofT=pct(s.v,M.total),parentIdx=s.parent!=null?s.parent:i-1;
@@ -1684,8 +1699,8 @@ function render(){
     const rawCount=countBy(rows,r=>get(r,"booked")||"(blank)");
     charts.bookRaw=new Chart(el("cBookRaw"),{type:"doughnut",data:{labels:Object.keys(rawCount),datasets:[{data:Object.values(rawCount),backgroundColor:[ORANGE,"#cbd5e1",NAVY2,BLUE,...PAL],borderWidth:2,borderColor:"#fff"}]},options:donutOpts()});
     rateChart("cBookType",agg(rows,r=>get(r,"type")||"Unspecified"),NAVY2);
-    const tr={"Enterprise (80+)":{n:0,booked:0},"ICP (25–79)":{n:0,booked:0},"Sub-ICP (<25)":{n:0,booked:0},"No FMCSA":{n:0,booked:0}};
-    rows.forEach(r=>{const to=tierOf(r),key={ent:"Enterprise (80+)",icp:"ICP (25–79)",sub:"Sub-ICP (<25)",none:"No FMCSA"}[to];tr[key].n++;if(isBooked(r))tr[key].booked++;});
+    const tr={"Enterprise":{n:0,booked:0},"Mid-Tier":{n:0,booked:0},"Sub-ICP":{n:0,booked:0},"No FMCSA":{n:0,booked:0}};
+    rows.forEach(r=>{const to=tierOf(r),key={ent:"Enterprise",icp:"Mid-Tier",sub:"Sub-ICP",none:"No FMCSA"}[to];tr[key].n++;if(isBooked(r))tr[key].booked++;});
     rateChart("cBookTier",tr,ORANGE);
     const bySrc=agg(rows,r=>get(r,"source")||"Unknown");
     const sr=Object.entries(bySrc).map(([k,o])=>[k,pct(o.booked,o.n),o.booked,o.n]).sort((a,b)=>b[1]-a[1]);
@@ -1718,7 +1733,14 @@ function render(){
 
   /* Enterprise table */
   const entRows=rows.filter(entFlag);
-  const entData=entRows.map(r=>{const t=get(r,"type"),pu=cleanInt(get(r,"pu")),lpm=parseLPM(get(r,"lpm"));return {company:get(r,"company")||"—",type:t||"—",source:get(r,"source")||"—",campaign:get(r,"campaign")||"—",adgroup:get(r,"adgroup")||"—",qual:isBroker(t)?lpm:(pu||0),qualTxt:isBroker(t)?`${lpm.toLocaleString()}+ loads/mo`:`${pu?pu.toLocaleString():"—"} trucks`,booked:isBooked(r),state:get(r,"state")||"—"};});
+  const entData=entRows.map(r=>{
+    const t=get(r,"type"),pu=cleanInt(get(r,"pu")),lpmRaw=get(r,"lpm"),lpm=lpmRaw?parseLPM(lpmRaw):null;
+    /* Hybrid can qualify via either metric — show whichever one actually earned it Enterprise,
+       preferring trucks when both do (matches this table's pre-existing default for non-brokers). */
+    const truckQual=truckTierOf(pu)==="ent",loadQual=loadTierOf(lpm)==="ent";
+    const showLoads=isBroker(t)||(isHybrid(r)&&loadQual&&!truckQual);
+    return {company:get(r,"company")||"—",type:t||"—",source:get(r,"source")||"—",campaign:get(r,"campaign")||"—",adgroup:get(r,"adgroup")||"—",qual:showLoads?(lpm||0):(pu||0),qualTxt:showLoads?`${(lpm||0).toLocaleString()}+ loads/mo`:`${pu?pu.toLocaleString():"—"} trucks`,booked:isBooked(r),state:get(r,"state")||"—"};
+  });
   const entCols=[{label:"Company",get:r=>r.company,fmt:v=>esc(v)},{label:"Type",get:r=>r.type,fmt:v=>esc(v)},{label:"Source",get:r=>r.source,fmt:v=>esc(v)},{label:"Campaign",get:r=>r.campaign,fmt:v=>esc(v)},{label:"Ad Group",get:r=>r.adgroup,fmt:v=>esc(v)},{label:"Qualifier",num:1,get:r=>r.qual,fmt:(v,r)=>`<strong>${r.qualTxt}</strong>`}];
   if(hasBooked)entCols.push({label:"Booked",get:r=>r.booked?1:0,fmt:(v)=>v?'<span class="tag ent">YES</span>':"—"});
   entCols.push({label:"State",get:r=>r.state,fmt:v=>esc(v)});
@@ -1739,7 +1761,7 @@ function buildMoM(M,C,rows,cmpRows){
   const keys=[["Total","total"],["Carrier","carrier"],["Broker","broker"],["Hybrid","hybrid"],["Booked","booked"],["Enterprise","enterprise"],["ICP+","icpPlus"],["FMCSA","fmcsa"]];
   charts.mom=new Chart(el("cMoM"),{type:"bar",data:{labels:keys.map(k=>k[0]),datasets:[{label:"Prior",data:keys.map(k=>C[k[1]]),backgroundColor:NAVY2,borderRadius:4},{label:"Current",data:keys.map(k=>M[k[1]]),backgroundColor:ORANGE,borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:20}},plugins:{legend:{position:"bottom",labels:{boxWidth:11}}},scales:{y:{beginAtZero:true,grid:{color:"#eef2f7"}},x:{grid:{display:false}}}}});
 
-  const rowsDef=[["Total Leads","total"],["Carrier","carrier"],["Broker","broker"],["Hybrid","hybrid"],["Meetings Booked","booked"],["Book Rate","bookRate","pp"],["Enterprise","enterprise"],["Enterprise Rate","entRate","pp"],["ICP+ (25+)","icpPlus"],["FMCSA Verified","fmcsa"],["Avg Fleet PU","avgPU"],["Median Fleet PU","medPU"]];
+  const rowsDef=[["Total Leads","total"],["Carrier","carrier"],["Broker","broker"],["Hybrid","hybrid"],["Meetings Booked","booked"],["Book Rate","bookRate","pp"],["Enterprise","enterprise"],["Enterprise Rate","entRate","pp"],["ICP+","icpPlus"],["FMCSA Verified","fmcsa"],["Avg Fleet PU","avgPU"],["Median Fleet PU","medPU"]];
   el("tMoM").innerHTML=`<thead><tr><th>Metric</th><th class="num">Prior</th><th class="num">Current</th><th class="num">Δ</th><th class="num">Δ%</th></tr></thead><tbody>`+
     rowsDef.map(([lab,k,pp])=>{
       const cv=C[k],mv=M[k],d=mv-cv;
@@ -1885,7 +1907,7 @@ function buildInsights(rows,M,C,cmpRows){
   }
 
   /* 4. Fleet-tier paradox — checks whether the "best" ICP tier actually converts best */
-  const tierLabels={ent:"Enterprise (80+)",icp:"ICP (25–79)",sub:"Sub-ICP (<25)"};
+  const tierLabels={ent:"Enterprise",icp:"Mid-Tier",sub:"Sub-ICP"};
   const tierStats={};
   rows.forEach(r=>{
     const t=tierOf(r);
@@ -1901,9 +1923,9 @@ function buildInsights(rows,M,C,cmpRows){
     if(best.k!=="ent"){
       const entStat=withRate.find(x=>x.k==="ent");
       cards.push(icard("o","target",`${best.rate}%`,"Fleet-Tier Paradox",
-        `${tierLabels[best.k]} books best at ${best.rate}%${entStat?` — beating Enterprise 80+ (${entStat.rate}%)`:""}. Targeting may be over-indexed on the biggest fleets.`));
+        `${tierLabels[best.k]} books best at ${best.rate}%${entStat?` — beating Enterprise (${entStat.rate}%)`:""}. Targeting may be over-indexed on the biggest fleets.`));
     }else{
-      cards.push(icard("g","target",`${best.rate}%`,"Enterprise Tier Confirmed",`Enterprise (80+) leads book best at ${best.rate}% — your targeting is well-aligned with actual conversion.`));
+      cards.push(icard("g","target",`${best.rate}%`,"Enterprise Tier Confirmed",`Enterprise leads book best at ${best.rate}% — your targeting is well-aligned with actual conversion.`));
     }
   }else{
     const topTier=Object.entries(M.tier).filter(([k])=>k!=="none").sort((a,b)=>b[1]-a[1])[0];
