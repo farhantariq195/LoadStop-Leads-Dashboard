@@ -2781,6 +2781,284 @@ function renderReport(){
     reportSlide4Html(monthText)+reportSlide5Html(monthText)+reportSlide6Html()+reportSlide7Html(monthText,key);
   wireSlide1(key);wireSlide2(key);wireSlide3(key);wireSlide7(key);
   renderReportCharts(s2);
+  const slidesBtn=el("reportSlidesBtn");
+  if(slidesBtn&&!slidesBtn.dataset.wired){slidesBtn.addEventListener("click",exportToSlides);slidesBtn.dataset.wired="1";}
+}
+
+/* ============================================================
+   Google Slides export — client-side only (no backend), using Google
+   Identity Services for a browser OAuth token and the Slides/Drive
+   REST APIs directly. Builds a real, editable presentation matching
+   the report's structure. Requires a one-time Google Cloud OAuth
+   Client ID (public identifier, not a secret) with this deployed
+   origin authorized — the button no-ops with a clear message until
+   GOOGLE_CLIENT_ID is set and can't be exercised from a file:// or
+   unauthorized origin, since Google's OAuth is origin-locked.
+   ============================================================ */
+const GOOGLE_CLIENT_ID="129437983874-6dj82537rc7gppvqtpadolnin8hb71j4.apps.googleusercontent.com";
+const GOOGLE_SCOPES="https://www.googleapis.com/auth/presentations https://www.googleapis.com/auth/drive.file";
+let gisTokenClient=null;
+function ensureGis(cb){
+  if(window.google&&google.accounts&&google.accounts.oauth2){cb();return;}
+  const s=document.createElement("script");
+  s.src="https://accounts.google.com/gsi/client";
+  s.onload=cb;
+  s.onerror=()=>alert("Couldn't load Google's sign-in script — check your connection and try again.");
+  document.head.appendChild(s);
+}
+function getGoogleToken(cb){
+  ensureGis(()=>{
+    if(!gisTokenClient){
+      gisTokenClient=google.accounts.oauth2.initTokenClient({
+        client_id:GOOGLE_CLIENT_ID,scope:GOOGLE_SCOPES,
+        callback:resp=>{
+          if(resp.error){alert("Google sign-in failed: "+resp.error);return;}
+          cb(resp.access_token);
+        }
+      });
+    }
+    gisTokenClient.requestAccessToken();
+  });
+}
+async function gApi(method,url,token,body){
+  const res=await fetch(url,{method,headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:body?JSON.stringify(body):undefined});
+  if(!res.ok)throw new Error(`${method} ${url.split("?")[0]} failed: ${res.status} ${(await res.text()).slice(0,300)}`);
+  return res.status===204?null:res.json();
+}
+async function uploadImageToDrive(token,dataUrl,name){
+  const blob=await (await fetch(dataUrl)).blob();
+  const metadata={name,mimeType:"image/png"};
+  const boundary="loadstopreportboundary";
+  const enc=new TextEncoder();
+  const pre=enc.encode(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n--${boundary}\r\nContent-Type: image/png\r\n\r\n`);
+  const post=enc.encode(`\r\n--${boundary}--`);
+  const body=new Blob([pre,await blob.arrayBuffer(),post]);
+  const res=await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webContentLink",{method:"POST",headers:{Authorization:"Bearer "+token,"Content-Type":`multipart/related; boundary=${boundary}`},body});
+  if(!res.ok)throw new Error("Drive upload failed: "+res.status+" "+(await res.text()).slice(0,300));
+  const file=await res.json();
+  await gApi("POST",`https://www.googleapis.com/drive/v3/files/${file.id}/permissions`,token,{role:"reader",type:"anyone"});
+  return {id:file.id,url:file.webContentLink};
+}
+
+/* ---- Layout primitives (EMU coordinates, inches in, converted at the edge) ---- */
+const EMU_PER_IN=914400,PAGE_W_IN=13.333,PAGE_H_IN=7.5;
+const emu=inches=>Math.round(inches*EMU_PER_IN);
+let slidesReqSeq=0;
+function slidesNewId(prefix){return prefix+"_"+(slidesReqSeq++);}
+function hexToRgb01(hex){const h=hex.replace("#","");return {red:parseInt(h.substr(0,2),16)/255,green:parseInt(h.substr(2,2),16)/255,blue:parseInt(h.substr(4,2),16)/255};}
+function reqRect(slideId,x,y,w,h,fillHex){
+  const id=slidesNewId("rect");
+  return [
+    {createShape:{objectId:id,shapeType:"RECTANGLE",elementProperties:{pageObjectId:slideId,size:{width:{magnitude:emu(w),unit:"EMU"},height:{magnitude:emu(h),unit:"EMU"}},transform:{scaleX:1,scaleY:1,translateX:emu(x),translateY:emu(y),unit:"EMU"}}}},
+    {updateShapeProperties:{objectId:id,fields:"shapeBackgroundFill.solidFill.color,outline.propertyState",shapeProperties:{shapeBackgroundFill:{solidFill:{color:{rgbColor:hexToRgb01(fillHex)}}},outline:{propertyState:"NOT_RENDERED"}}}}
+  ];
+}
+function reqText(slideId,x,y,w,h,text,opts){
+  opts=opts||{};
+  const size=opts.size||11,color=opts.color||"#16232f",bold=!!opts.bold,align=opts.align||"START",fontFamily=opts.fontFamily||"Arial";
+  const id=slidesNewId("txt");
+  return [
+    {createShape:{objectId:id,shapeType:"TEXT_BOX",elementProperties:{pageObjectId:slideId,size:{width:{magnitude:emu(w),unit:"EMU"},height:{magnitude:emu(h),unit:"EMU"}},transform:{scaleX:1,scaleY:1,translateX:emu(x),translateY:emu(y),unit:"EMU"}}}},
+    {insertText:{objectId:id,text:String(text==null||text===""?" ":text)}},
+    {updateTextStyle:{objectId:id,textRange:{type:"ALL"},fields:"fontSize,foregroundColor,bold,fontFamily",style:{fontSize:{magnitude:size,unit:"PT"},foregroundColor:{opaqueColor:{rgbColor:hexToRgb01(color)}},bold,fontFamily}}},
+    {updateParagraphStyle:{objectId:id,textRange:{type:"ALL"},fields:"alignment",style:{alignment:align}}}
+  ];
+}
+function reqImage(slideId,x,y,w,h,url){
+  if(!url)return [];
+  const id=slidesNewId("img");
+  return [{createImage:{objectId:id,url,elementProperties:{pageObjectId:slideId,size:{width:{magnitude:emu(w),unit:"EMU"},height:{magnitude:emu(h),unit:"EMU"}},transform:{scaleX:1,scaleY:1,translateX:emu(x),translateY:emu(y),unit:"EMU"}}}}];
+}
+function reqTable(slideId,x,y,w,h,rows2d){
+  if(!rows2d.length||!rows2d[0].length)return [];
+  const id=slidesNewId("tbl"),numRows=rows2d.length,numCols=rows2d[0].length;
+  const reqs=[{createTable:{objectId:id,elementProperties:{pageObjectId:slideId,size:{width:{magnitude:emu(w),unit:"EMU"},height:{magnitude:emu(h),unit:"EMU"}},transform:{scaleX:1,scaleY:1,translateX:emu(x),translateY:emu(y),unit:"EMU"}},rows:numRows,columns:numCols}}];
+  rows2d.forEach((row,ri)=>{
+    row.forEach((cellText,ci)=>{
+      if(cellText==null||cellText==="")return;
+      reqs.push({insertText:{objectId:id,cellLocation:{rowIndex:ri,columnIndex:ci},text:String(cellText)}});
+      reqs.push({updateTextStyle:{objectId:id,cellLocation:{rowIndex:ri,columnIndex:ci},textRange:{type:"ALL"},fields:"bold,fontSize",style:{bold:ri===0,fontSize:{magnitude:ri===0?8.5:8,unit:"PT"}}}});
+    });
+  });
+  return reqs;
+}
+function reqTileRow(slideId,x,y,w,h,tiles){
+  const n=tiles.length,gap=0.15,tileW=(w-(n-1)*gap)/n;
+  let reqs=[];
+  tiles.forEach((t,i)=>{
+    const tx=x+i*(tileW+gap);
+    reqs=reqs.concat(reqRect(slideId,tx,y,tileW,h,t.color));
+    reqs=reqs.concat(reqText(slideId,tx+0.05,y+0.1,tileW-0.1,0.4,String(t.value),{size:t.size||16,color:"#fff",bold:true,align:"CENTER"}));
+    reqs=reqs.concat(reqText(slideId,tx+0.05,y+h-0.42,tileW-0.1,0.25,t.label,{size:8,color:"#fff",align:"CENTER"}));
+    if(t.sub)reqs=reqs.concat(reqText(slideId,tx+0.05,y+h-0.2,tileW-0.1,0.35,t.sub,{size:6.5,color:"#dbe4ef",align:"CENTER"}));
+  });
+  return reqs;
+}
+function reqHeader(slideId,title,sub,accent){
+  let reqs=reqRect(slideId,0,0,PAGE_W_IN,0.95,"#0D2B4E");
+  reqs=reqs.concat(reqText(slideId,0.35,0.15,accent?PAGE_W_IN-2.6:PAGE_W_IN-0.7,0.4,title,{size:17,color:"#fff",bold:true}));
+  if(sub)reqs=reqs.concat(reqText(slideId,0.35,0.58,accent?PAGE_W_IN-2.6:PAGE_W_IN-0.7,0.3,sub,{size:9.5,color:"#cfd8e3"}));
+  if(accent){
+    reqs=reqs.concat(reqRect(slideId,PAGE_W_IN-2.2,0,2.2,0.95,"#E87722"));
+    reqs=reqs.concat(reqText(slideId,PAGE_W_IN-2.2,0.14,2.2,0.4,String(accent.value),{size:23,color:"#fff",bold:true,align:"CENTER"}));
+    reqs=reqs.concat(reqText(slideId,PAGE_W_IN-2.2,0.6,2.2,0.25,accent.label,{size:9,color:"#fff",align:"CENTER"}));
+  }
+  return reqs;
+}
+
+/* ---- Per-slide request builders — same data objects as the on-page HTML ---- */
+function slidesSlide1(slideId,monthText,deptComments){
+  let reqs=reqHeader(slideId,"LoadStop | Marketing Team Initiatives",monthText);
+  const rows=[["Department","Notes"]].concat(REPORT_DEPTS.map(d=>[d,deptComments[d]||""]));
+  return reqs.concat(reqTable(slideId,0.35,1.15,PAGE_W_IN-0.7,5.9,rows));
+}
+function slidesSlide2(slideId,s2,imgUrls){
+  let reqs=reqHeader(slideId,"LoadStop | Overview at a Glance",`Marketing Report - ${s2.monthText}`,{value:s2.mql,label:"MQLs"});
+  reqs=reqs.concat(reqTileRow(slideId,0.35,1.2,PAGE_W_IN-0.7,1.15,[
+    {value:"$"+s2.spendTotal.toLocaleString(undefined,{maximumFractionDigits:0}),label:"Ad Spend",sub:`Google: $${Math.round(s2.spendGoogle).toLocaleString()} · Meta: $${Math.round(s2.spendMeta).toLocaleString()}`,color:"#0D2B4E",size:17},
+    {value:`${s2.carrier} / ${s2.broker} / ${s2.hybrid}`,label:"Carrier / Broker / Hybrid MQLs",color:"#1B4F8A",size:15},
+    {value:s2.enterprise,label:"Enterprise Leads",sub:"80+ trucks or 751+ loads/mo",color:"#E87722",size:19}
+  ]));
+  reqs=reqs.concat(reqText(slideId,0.35,2.6,5.8,0.3,"MQL Source Breakdown",{size:11,bold:true,color:"#0D2B4E"}));
+  reqs=reqs.concat(reqImage(slideId,0.35,2.95,5.8,2.6,imgUrls.src));
+  reqs=reqs.concat(reqText(slideId,6.5,2.6,PAGE_W_IN-6.85,0.3,"Funnel",{size:11,bold:true,color:"#0D2B4E"}));
+  const funnelTxt=[`MQLs: ${s2.mql.toLocaleString()}`,`Conversion Rate: ${s2.convRate}%`,`SQLs: ${s2.sqls!=null?s2.sqls:"?"}`,`Demos Scheduled: ${s2.demos!=null?s2.demos:"?"}`,`Connected: ${s2.connected!=null?s2.connected:"?"}`,`Qualified Demos: ${s2.qualified!=null?s2.qualified:"?"}`].join("\n");
+  reqs=reqs.concat(reqText(slideId,6.5,3.0,PAGE_W_IN-6.85,2.4,funnelTxt,{size:13,color:"#16232f"}));
+  reqs=reqs.concat(reqText(slideId,0.35,5.75,7,0.3,"FMCSA Verified Fleet Opportunity",{size:11,bold:true,color:"#0D2B4E"}));
+  reqs=reqs.concat(reqImage(slideId,0.35,6.1,PAGE_W_IN-0.7,1.2,imgUrls.fleet));
+  return reqs;
+}
+function slidesSlide3(slideId,monthText,s3){
+  let reqs=reqHeader(slideId,`LoadStop Converted Leads — ${monthText}`,"MQL-to-Deal Attribution | Gravity Forms + HubSpot Source Data",{value:"$"+s3.totalDeal.toLocaleString(undefined,{maximumFractionDigits:0}),label:"Total Deal Value"});
+  const srcTiles=Object.entries(s3.bySource).slice(0,3).map(([name,n])=>({value:n,label:"Via "+name,color:"#1a7f45"}));
+  reqs=reqs.concat(reqTileRow(slideId,0.35,1.2,PAGE_W_IN-0.7,0.85,[{value:s3.rows.length,label:"Conversions",color:"#0D2B4E"}].concat(srcTiles)));
+  reqs=reqs.concat(reqTileRow(slideId,0.35,2.2,PAGE_W_IN-0.7,0.85,[
+    {value:"$"+s3.adSpend.toLocaleString(undefined,{maximumFractionDigits:0}),label:"Ad Spend"+(s3.adSpendIsAuto?" (auto)":""),color:"#2E7ABF"},
+    {value:s3.roas!=null?s3.roas+"x":"—",label:"Return on Ad Spend",color:"#E87722"}
+  ]));
+  const rows=[REPORT_S3_LABELS].concat(s3.rows.map(r=>REPORT_S3_COLS.map(c=>r[c]||"")));
+  return reqs.concat(reqTable(slideId,0.35,3.25,PAGE_W_IN-0.7,3.8,rows));
+}
+function slidesSlide4(slideId,monthText,s4){
+  let reqs=reqHeader(slideId,"LoadStop | Enterprise Leads",monthText);
+  reqs=reqs.concat(reqTileRow(slideId,0.35,1.2,PAGE_W_IN-0.7,0.9,[
+    {value:s4.total,label:"Enterprise MQLs",color:"#0D2B4E"},
+    {value:s4.carrier,label:"Enterprise Carrier",color:"#E87722"},
+    {value:s4.broker,label:"Enterprise Brokers",color:"#1B4F8A"},
+    {value:s4.hybrid,label:"Enterprise Hybrid",color:"#2E7ABF"}
+  ]));
+  const rows=[["Company","Type","Source","Campaign","Qualifier","State"]].concat(s4.data.map(r=>[r.company,r.type,r.source,r.campaign,r.qualTxt,r.state]));
+  return reqs.concat(reqTable(slideId,0.35,2.3,PAGE_W_IN-0.7,4.8,rows));
+}
+function slidesSlide5(slideId,monthText,s5){
+  let reqs=reqHeader(slideId,"LoadStop | Mid-Tier Carrier Leads",`${monthText} — FMCSA Power Units: 20 to 79 trucks (or 251–750 loads/mo for Hybrid)`);
+  const srcTiles=["Paid Search","Direct Traffic","Organic Search"].map(s=>{
+    const found=Object.entries(s5.bySource).find(([k])=>k.toLowerCase()===s.toLowerCase());
+    return {value:found?found[1]:0,label:s,color:"#2E7ABF"};
+  });
+  reqs=reqs.concat(reqTileRow(slideId,0.35,1.2,PAGE_W_IN-0.7,0.9,[
+    {value:s5.total,label:"Total MQLs",color:"#E87722"},{value:s5.totalPu.toLocaleString(),label:"Total FMCSA Trucks",color:"#0D2B4E"}
+  ].concat(srcTiles)));
+  const rows=[["#","Company","Type","FMCSA Trucks","Veh. Count","Source","Campaign","Ad Group","State","Date"]]
+    .concat(s5.data.map((r,i)=>[i+1,r.company,r.type,r.puTxt,r.veh,r.source,r.campaign,r.adgroup,r.state,r.date]));
+  return reqs.concat(reqTable(slideId,0.35,2.3,PAGE_W_IN-0.7,4.8,rows));
+}
+function slidesSlide6(slideId,imgUrls){
+  let reqs=reqHeader(slideId,"LoadStop | Month Over Month Overview");
+  reqs=reqs.concat(reqText(slideId,0.35,1.15,6,0.3,"Leads Per Month",{size:11,bold:true,color:"#0D2B4E"}));
+  reqs=reqs.concat(reqImage(slideId,0.35,1.5,PAGE_W_IN-0.7,2.7,imgUrls.leadsMonth));
+  reqs=reqs.concat(reqText(slideId,0.35,4.35,6,0.3,"Monthly Spend — Year to Date",{size:11,bold:true,color:"#0D2B4E"}));
+  reqs=reqs.concat(reqImage(slideId,0.35,4.7,PAGE_W_IN-0.7,2.55,imgUrls.spendYtd));
+  return reqs;
+}
+function slidesSlide7(slideId,monthText,leads,stats,segments){
+  let reqs=reqHeader(slideId,"LoadStop | Email Marketing",monthText);
+  reqs=reqs.concat(reqTileRow(slideId,0.35,1.2,PAGE_W_IN-0.7,0.85,REPORT_S7_STATS.map(([f,lab])=>({value:stats[f]||"—",label:lab,color:"#1B4F8A",size:13}))));
+  reqs=reqs.concat(reqText(slideId,0.35,2.2,6,0.25,"Segment Performance",{size:10,bold:true,color:"#0D2B4E"}));
+  const segRows=[REPORT_S7_SEG_LABELS].concat(segments.map(s=>REPORT_S7_SEG_COLS.map(c=>s[c]||"")));
+  reqs=reqs.concat(segments.length?reqTable(slideId,0.35,2.55,PAGE_W_IN-0.7,1.9,segRows):reqText(slideId,0.35,2.55,PAGE_W_IN-0.7,0.3,"No segments entered.",{size:10,color:"#64748b"}));
+  reqs=reqs.concat(reqText(slideId,0.35,4.6,6,0.25,"Email-Sourced Leads",{size:10,bold:true,color:"#0D2B4E"}));
+  const leadRows=[["Company","Type","FMCSA Trucks","Veh. Count","State","Email","Date"]].concat(leads.map(r=>[r.company,r.type,r.pu?r.pu+" trucks":"—",r.veh,r.state,r.email,r.date]));
+  return reqs.concat(reqTable(slideId,0.35,4.95,PAGE_W_IN-0.7,2.2,leadRows));
+}
+
+async function buildAndCreatePresentation(token,monthText,progress){
+  const key=monthTextToKey(monthText);
+  const s2=reportSlide2Data(monthText);
+  const s3=reportSlide3Data(key,s2.spendTotal);
+  const s4=reportSlide4Data(monthText);
+  const s5=reportSlide5Data(monthText);
+  const s7leads=reportSlide7Data(monthText);
+  const s7manual=reportEmailManual(key);
+  const deptComments=reportManualFor(key).deptComments||{};
+
+  progress("Uploading charts…");
+  const uploaded=[];
+  const grab=async(chart,name)=>{
+    if(!chart)return null;
+    const r=await uploadImageToDrive(token,chart.toBase64Image(),name);
+    uploaded.push(r.id);
+    return r.url;
+  };
+  const imgUrls={
+    src:await grab(charts.rptSource,"mql-source.png"),
+    fleet:await grab(charts.rptFleet,"fleet-opportunity.png"),
+    leadsMonth:await grab(charts.rptLeadsMonth,"leads-per-month.png"),
+    spendYtd:await grab(charts.rptSpendYtd,"spend-ytd.png")
+  };
+
+  progress("Creating presentation…");
+  const pres=await gApi("POST","https://slides.googleapis.com/v1/presentations",token,{
+    title:`LoadStop Marketing Report — ${monthText}`,
+    pageSize:{width:{magnitude:emu(PAGE_W_IN),unit:"EMU"},height:{magnitude:emu(PAGE_H_IN),unit:"EMU"}}
+  });
+  const firstSlideId=pres.slides[0].objectId;
+  const otherSlideIds=[2,3,4,5,6,7].map(()=>slidesNewId("slide"));
+  const slideIds=[firstSlideId].concat(otherSlideIds);
+
+  const removeDefaults=(pres.slides[0].pageElements||[]).map(pe=>({deleteObject:{objectId:pe.objectId}}));
+  const createSlideReqs=otherSlideIds.map(id=>({createSlide:{objectId:id}}));
+
+  progress("Writing content…");
+  await gApi("POST",`https://slides.googleapis.com/v1/presentations/${pres.presentationId}:batchUpdate`,token,{requests:removeDefaults.concat(createSlideReqs)});
+  /* One big batch would risk hitting response size/complexity limits with 7 dense slides — send
+     each slide's requests as its own batchUpdate call instead, sequentially, so a problem on one
+     slide doesn't blank out ones that already succeeded. */
+  const perSlide=[slidesSlide1(slideIds[0],monthText,deptComments),
+    slidesSlide2(slideIds[1],s2,imgUrls),slidesSlide3(slideIds[2],monthText,s3),
+    slidesSlide4(slideIds[3],monthText,s4),slidesSlide5(slideIds[4],monthText,s5),
+    slidesSlide6(slideIds[5],imgUrls),slidesSlide7(slideIds[6],monthText,s7leads,s7manual.stats||{},s7manual.segments||[])];
+  for(const reqs of perSlide){
+    if(reqs.length)await gApi("POST",`https://slides.googleapis.com/v1/presentations/${pres.presentationId}:batchUpdate`,token,{requests:reqs});
+  }
+
+  progress("Cleaning up…");
+  for(const fileId of uploaded){
+    try{await gApi("DELETE",`https://www.googleapis.com/drive/v3/files/${fileId}`,token);}catch(e){}
+  }
+  return `https://docs.google.com/presentation/d/${pres.presentationId}/edit`;
+}
+
+function exportToSlides(){
+  const btn=el("reportSlidesBtn"),note=el("reportSlidesNote");
+  const monthText=el("reportMonth")?el("reportMonth").value:null;
+  if(!monthText)return;
+  if(!GOOGLE_CLIENT_ID){if(note)note.textContent="Google Slides export isn't set up yet.";return;}
+  btn.disabled=true;
+  const setStatus=msg=>{btn.textContent=msg;};
+  setStatus("Connecting to Google…");
+  getGoogleToken(token=>{
+    buildAndCreatePresentation(token,monthText,setStatus).then(url=>{
+      btn.disabled=false;btn.textContent="Open in Google Slides";
+      if(note)note.textContent="";
+      window.open(url,"_blank");
+    }).catch(err=>{
+      btn.disabled=false;btn.textContent="Open in Google Slides";
+      if(note)note.textContent="Failed — see console for details.";
+      console.error(err);
+      alert("Couldn't create the Slides deck: "+(err&&err.message?err.message:err));
+    });
+  });
 }
 </script>
 </body>
